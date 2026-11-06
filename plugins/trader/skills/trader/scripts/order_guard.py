@@ -103,7 +103,19 @@ def main() -> int:
     now = datetime.now(timezone.utc)
     max_slip = float(guard.get("max_limit_slippage_pct", 0.5)) / 100
     reasons: list[str] = []
-    for f in sorted(appr_dir.glob("*.json"), reverse=True) if appr_dir.exists() else []:
+    tool_use_id = payload.get("tool_use_id")
+    tickets = sorted(appr_dir.glob("*.json"), reverse=True) if appr_dir.exists() else []
+    # Idempotent per tool call: if the guard is registered twice (plugin + project settings), the second
+    # check of the same call sees the ticket this call already consumed and lets it through.
+    if tool_use_id:
+        for f in tickets:
+            try:
+                t = tl.load_json(f)
+            except Exception:  # noqa: BLE001
+                continue
+            if t.get("consumed_tool_use_id") == tool_use_id:
+                return 0
+    for f in tickets:
         try:
             t = tl.load_json(f)
         except Exception:  # noqa: BLE001
@@ -136,6 +148,7 @@ def main() -> int:
         t["consumed_at"] = now.replace(microsecond=0).isoformat()
         t["status"] = "USED"
         t["used_by_tool"] = tool
+        t["consumed_tool_use_id"] = tool_use_id
         tl.dump_json(t, f)
         print(f"[trader order guard] allowed by approval {t['id']}", file=sys.stderr)
         return 0

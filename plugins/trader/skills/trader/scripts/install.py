@@ -43,8 +43,12 @@ def agents_source() -> Optional[Path]:
 
 
 def is_plugin_install() -> bool:
-    parts = tl.SKILL_DIR.as_posix()
-    return "/.claude/plugins/" in parts
+    """True when this skill sits inside a Claude Code plugin (installed from a marketplace, or loaded
+    with --plugin-dir): the plugin then provides the agents and the order-guard hook itself."""
+    if "/.claude/plugins/" in tl.SKILL_DIR.as_posix():
+        return True
+    plugin_root = tl.SKILL_DIR.parent.parent
+    return (plugin_root / ".claude-plugin" / "plugin.json").exists() and (plugin_root / "hooks" / "hooks.json").exists()
 
 
 def install_agents(dest_kind: str, check: bool) -> str:

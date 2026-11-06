@@ -5,3 +5,6 @@ trader-workspace/
 __pycache__/
 *.pyc
 .DS_Store
+# simulation data downloads and run outputs
+sim/data/
+sim/runs/

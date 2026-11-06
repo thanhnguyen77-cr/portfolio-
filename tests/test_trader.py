@@ -322,8 +322,9 @@ class GuardAndCliTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def guard(self, tool, inp):
-        payload = json.dumps({"tool_name": tool, "tool_input": inp, "cwd": self.tmp.name})
+    def guard(self, tool, inp, tool_use_id=None):
+        payload = json.dumps({"tool_name": tool, "tool_input": inp, "cwd": self.tmp.name,
+                              "tool_use_id": tool_use_id})
         return run("order_guard.py", stdin=payload, env=self.env)
 
     def approve(self):
@@ -352,6 +353,15 @@ class GuardAndCliTests(unittest.TestCase):
         self.assertEqual(self.guard("mcp__alpaca__place_stock_order", order).returncode, 0)
         self.assertEqual(self.guard("mcp__alpaca__place_stock_order", order).returncode, 2)  # single use
         self.assertEqual(self.guard("mcp__alpaca__place_option_order", order).returncode, 2)
+
+    def test_guard_runs_twice_for_one_call(self):
+        # the hook may be registered twice (plugin + project settings); both checks of one call must pass
+        self.assertEqual(self.approve().returncode, 0)
+        order = {"symbol": "ABC", "side": "buy", "qty": 10, "limit_price": 100, "order_class": "bracket",
+                 "stop_loss": {"stop_price": 95}}
+        self.assertEqual(self.guard("mcp__alpaca__place_stock_order", order, "toolu_1").returncode, 0)
+        self.assertEqual(self.guard("mcp__alpaca__place_stock_order", order, "toolu_1").returncode, 0)
+        self.assertEqual(self.guard("mcp__alpaca__place_stock_order", order, "toolu_2").returncode, 2)
 
     def test_guard_expired_ticket(self):
         self.assertEqual(self.approve().returncode, 0)
