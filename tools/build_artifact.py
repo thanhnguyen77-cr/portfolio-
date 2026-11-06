@@ -96,7 +96,10 @@ def main() -> int:
     # the viewer serves no .zip files, so the standard library ships under a served extension
     shutil.copy2(Path(a.pyodide) / "python_stdlib.zip", out / "pyodide" / "python_stdlib_zip.wasm")
     for f in Path(a.live).iterdir():
-        shutil.copy2(f, out / "data" / "live" / f.name)
+        if f.is_file():
+            shutil.copy2(f, out / "data" / "live" / f.name)
+    if (Path(a.live) / "intraday").is_dir():
+        shutil.copytree(Path(a.live) / "intraday", out / "data" / "live" / "intraday")
     for s in HIST:
         shutil.copy2(ROOT / "sim" / "data" / f"{s}.csv", out / "data" / "hist2017" / f"{s}.csv")
     shutil.copy2(app / "data" / "replay2017.json", out / "data" / "replay2017.json")
