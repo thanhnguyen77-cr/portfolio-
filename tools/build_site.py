@@ -8,6 +8,7 @@
   _site/app/                 the in-browser desk (site/app)
   _site/app/py/              the desk's Python scripts, loaded by Pyodide
   _site/app/data/live/       latest daily bars, if a live-data folder is given
+  _site/jetski/              Turbo Tide, the 3D jet ski racing game (site/jetski)
 """
 
 from __future__ import annotations
