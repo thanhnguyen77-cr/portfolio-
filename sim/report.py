@@ -132,7 +132,7 @@ def parse_transcript(path: Path) -> dict:
                 txt = "\n".join(x.get("text", "") for x in txt if isinstance(x, dict)) if isinstance(txt, list) else str(txt or "")
                 if c.get("tool_use_id") in agents:
                     agents[c["tool_use_id"]]["report"] = txt
-                if "order guard" in txt:
+                if "[trader order guard] BLOCKED" in txt:
                     guard.append(txt.strip())
     return {"agents": [agents[k] for k in order], "calls": calls, "guard": guard, "result": result}
 

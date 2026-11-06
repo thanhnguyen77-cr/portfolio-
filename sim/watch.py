@@ -42,7 +42,7 @@ while True:
                     txt = " ".join(x.get("text", "") for x in txt if isinstance(x, dict)) if isinstance(txt, list) else str(txt)
                     if c.get("tool_use_id") in names:
                         emit(f"[{f.stem}] <- {names.pop(c['tool_use_id'])} done: {txt.strip()[:200]!r}")
-                    elif "order guard" in txt:
+                    elif "[trader order guard] BLOCKED" in txt:
                         emit(f"[{f.stem}] GUARD {txt.strip()[:220]!r}")
             if ev.get("type") == "result":
                 emit(f"[{f.stem}] RESULT turns={ev.get('num_turns')} cost=${ev.get('total_cost_usd')} "
