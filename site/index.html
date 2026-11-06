@@ -186,6 +186,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: 
       <a href="#agents" class="hide-sm">Agents</a>
       <a href="#safety" class="hide-sm">Safety</a>
       <a href="#install">Install</a>
+      <a href="app/">App</a>
       <a href="https://github.com/thanhnguyen77-cr/portfolio-">GitHub</a>
     </nav>
   </div>
@@ -197,7 +198,8 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: 
     <h1>An 11-agent trading desk for Claude.</h1>
     <p class="lede">Eleven agents scan your TradingView watchlist, plan the best setup and backtest its rule over years of history after fees. They size the trade with a capped Kelly Criterion, watch the news, set alerts, and place a paper order on Alpaca. A risk manager has the final veto, and a hook enforces it.</p>
     <div class="cta">
-      <a class="btn primary" href="#install">Install the plugin</a>
+      <a class="btn primary" href="app/">Open the app</a>
+      <a class="btn" href="#install">Install the plugin</a>
       <a class="btn" href="trader-skill.zip" download>Download skill (.zip)</a>
       <a class="btn" href="https://github.com/thanhnguyen77-cr/portfolio-">View source</a>
     </div>
@@ -221,11 +223,11 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: 
         <li><span class="num">3</span><div><h3>Backtest</h3><div class="who">trader-backtester · backtest.py</div></div><p>Replays the plan's rule over 5+ years of history and on peer stocks, after slippage and fees, with out-of-sample and sensitivity checks.</p><span class="gate">verdict PASS</span></li>
         <li><span class="num">4</span><div><h3>News check</h3><div class="who">trader-news-desk</div></div><p>Earnings date, filings, analyst actions and headlines, rated green, amber or red. It can keep watching while a trade is live.</p><span class="gate">not red</span></li>
         <li><span class="num">5</span><div><h3>Position size</h3><div class="who">trader-position-sizer · kelly.py</div></div><p>Fractional Kelly using live account balances, capped by risk per trade, max per stock, the cash reserve and total exposure.</p><span class="gate">≥ 1 share</span></li>
-        <li><span class="num">6</span><div><h3>Price alerts</h3><div class="who">trader-alerts</div></div><p>TradingView alerts at the entry and invalidation levels, so your phone pings when price gets there.</p><span class="gate none">—</span></li>
+        <li><span class="num">6</span><div><h3>Price alerts</h3><div class="who">trader-alerts</div></div><p>TradingView alerts at the entry and invalidation levels, so your phone pings when price gets there.</p><span class="gate none">no gate</span></li>
         <li class="human"><span class="num">7</span><div><h3>You confirm</h3><div class="who">you + desk lead</div></div><p>An order card with shares, prices, cost, dollars at risk, backtest, news and regime. Nothing goes ahead without your explicit yes.</p><span class="gate">your "yes"</span></li>
         <li><span class="num">8</span><div><h3>Risk check</h3><div class="who">trader-risk-manager · risk_check.py</div></div><p>About 20 rules checked against a fresh account snapshot. Passing them issues a single-use approval ticket that expires after 30 minutes.</p><span class="gate">APPROVE</span></li>
         <li><span class="num">9</span><div><h3>Paper order</h3><div class="who">trader-broker</div></div><p>A bracket order on Alpaca paper, with protective stop and take-profit, placed exactly as approved.</p><span class="gate">accepted</span></li>
-        <li><span class="num">10</span><div><h3>Journal</h3><div class="who">trader-journal · journal.py</div></div><p>Logs fills, compares real results with the backtest, and writes up lessons.</p><span class="gate none">—</span></li>
+        <li><span class="num">10</span><div><h3>Journal</h3><div class="who">trader-journal · journal.py</div></div><p>Logs fills, compares real results with the backtest, and writes up lessons.</p><span class="gate none">no gate</span></li>
       </ol>
     </div>
   </section>

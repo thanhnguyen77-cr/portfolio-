@@ -1,14 +1,16 @@
 name: Tests and GitHub Pages
 
 # Pull requests: run the tests and build the site.
-# Pushes to main: also publish the site to the gh-pages branch, which
-# GitHub Pages serves at https://<owner>.github.io/<repo>/.
+# Pushes to main, the weekday schedule and manual runs: also fetch the latest
+# daily market data for the app and publish the site to the gh-pages branch.
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "37 22 * * 1-5"   # weekdays, after the US close
 
 permissions:
   contents: read
@@ -30,15 +32,26 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests -v
 
-      - name: Build standalone skill zip
-        run: python tools/build_skill_zip.py
+      - name: Fetch latest market data for the app
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: |
+          pip install --quiet yfinance
+          python tools/fetch_live_data.py --out _live
+
+      - name: Keep the previous data if today's fetch failed
+        if: github.event_name != 'pull_request'
+        run: |
+          if [ ! -f _live/meta.json ]; then
+            mkdir -p _live
+            if git fetch --depth 1 origin gh-pages 2>/dev/null; then
+              git archive FETCH_HEAD app/data/live 2>/dev/null | tar -x -C _live --strip-components=3 || true
+            fi
+          fi
+          ls _live | head -30 || true
 
       - name: Assemble site
-        run: |
-          mkdir -p _site
-          cp -r site/. _site/
-          cp dist/trader-skill.zip _site/trader-skill.zip
-          touch _site/.nojekyll
+        run: python tools/build_site.py --out _site --live _live
 
       - uses: actions/upload-artifact@v4
         with:

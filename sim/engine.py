@@ -21,7 +21,6 @@ Fill rules (conservative, matching the desk's backtester):
 from __future__ import annotations
 
 import csv
-import fcntl
 import json
 import os
 import sys
@@ -31,6 +30,11 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
+
+try:  # not available in the browser (Pyodide), where there is a single process anyway
+    import fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None
 
 HERE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("SIM_DATA") or HERE / "data")
@@ -113,7 +117,8 @@ def prev_day(day: str) -> Optional[str]:
 def state(write: bool = True):
     STATE.parent.mkdir(parents=True, exist_ok=True)
     lock = open(STATE.with_suffix(".lock"), "w")
-    fcntl.flock(lock, fcntl.LOCK_EX)
+    if fcntl:
+        fcntl.flock(lock, fcntl.LOCK_EX)
     try:
         st = json.loads(STATE.read_text()) if STATE.exists() else {}
         yield st
@@ -122,7 +127,8 @@ def state(write: bool = True):
             tmp.write_text(json.dumps(st, indent=1))
             tmp.replace(STATE)
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        if fcntl:
+            fcntl.flock(lock, fcntl.LOCK_UN)
         lock.close()
 
 
