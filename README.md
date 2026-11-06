@@ -2,7 +2,7 @@
 
 The Trader Skill turns Claude into a small trading desk for US stocks. It has eleven specialised agents. They read your TradingView charts and watchlists, plan and backtest trades, size positions with a capped Kelly Criterion, watch the news, set price alerts, and place **paper** trades on Alpaca. A risk manager can veto any order, and Claude Code itself enforces that veto. Every calculation runs in plain, tested Python, never in the model's head.
 
-**Website:** https://thanhnguyen77-cr.github.io/portfolio-/ (published from `main` by `.github/workflows/pages.yml`)
+**Website:** https://thanhnguyen77-cr.github.io/portfolio-/ (built from `main` and published to the `gh-pages` branch by `.github/workflows/pages.yml`)
 
 > **Not financial advice.** This is a decision-support and paper-trading tool. Backtests describe the past, stops can gap, and you are responsible for every order. The desk starts in paper mode and cannot switch itself to live trading.
 
@@ -84,7 +84,7 @@ plugins/trader/
     references/                        connectors, workspace formats, methodology
     templates/                         example profile and plan
 site/index.html                        GitHub Pages landing page
-.github/workflows/pages.yml            runs tests, builds the zip, publishes the site from main
+.github/workflows/pages.yml            runs tests, builds the zip, publishes the site to gh-pages
 tests/test_trader.py                   unit + CLI tests
 tools/build_skill_zip.py               builds the standalone skill / zip
 ```
