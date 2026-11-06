@@ -172,6 +172,43 @@ footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; c
 .rewards div b { font: 600 18px var(--display); font-variant-numeric: tabular-nums; }
 .warn { font-size: 13px; color: var(--muted); margin-top: 10px; }
 .chips.small .chip { padding: 4px 10px; font-size: 13px; }
+/* analyst note */
+.note { background: var(--panel); border-radius: 22px; padding: 24px; margin-top: 18px; }
+.nhead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px 20px; }
+.nhead h4 { font: 600 24px var(--display); margin: 0; letter-spacing: -0.02em; }
+.nhead .px { font: 600 24px var(--display); font-variant-numeric: tabular-nums; }
+.nhead .px small { font: 500 14px var(--font); color: var(--muted); margin-left: 8px; }
+.bias { display: inline-flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
+.bias b { font: 600 30px var(--display); letter-spacing: -0.02em; }
+.bias span { color: var(--muted); font-size: 15px; }
+.prob { margin: 14px 0 4px; }
+.prob .track { height: 10px; border-radius: 10px; background: var(--hair); position: relative; overflow: hidden; }
+.prob .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); border-radius: 10px; }
+.prob .track em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--muted); }
+.prob .lab { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.ncols { display: grid; gap: 18px; grid-template-columns: 1fr; margin-top: 18px; }
+@media (min-width: 900px) { .ncols { grid-template-columns: 1.4fr 1fr; } }
+.ncols > div { min-width: 0; }
+.score { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.score td { padding: 9px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+.score td:first-child { font-weight: 600; white-space: nowrap; width: 1%; }
+.score td:nth-child(2) { white-space: nowrap; width: 1%; }
+.score td:last-child { color: var(--muted); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 10px; border: 1.5px solid var(--text); margin-right: 8px; vertical-align: -1px; }
+.dot.up { background: var(--text); } .dot.down { background: transparent; } .dot.flat { background: linear-gradient(90deg, var(--text) 50%, transparent 50%); }
+.scen { list-style: none; margin: 0; padding: 0; }
+.scen li { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
+.scen li b { font-variant-numeric: tabular-nums; }
+.scen li span { color: var(--muted); font-size: 13px; }
+.lv2 { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.lv2 li { display: flex; justify-content: space-between; padding: 7px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.lv2 li span { color: var(--muted); }
+.lv2 li.now { font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px 16px; margin-top: 18px; }
+.stats div span { display: block; font-size: 12px; color: var(--muted); }
+.stats div b { font: 600 17px var(--display); font-variant-numeric: tabular-nums; }
+.asof { font-size: 12.5px; color: var(--faint); margin-top: 10px; }
+.intra { margin-top: 8px; }
 /* cfd */
 .cfdgrid { display: grid; gap: 18px; grid-template-columns: 1fr; }
 @media (min-width: 900px) { .cfdgrid { grid-template-columns: 1fr 1fr; } }
@@ -261,7 +298,9 @@ footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; c
     <p>This page runs the <b>same Python scripts</b> the Claude Code plugin uses, inside your browser: the market regime check, the screener, the backtester with fees and out-of-sample checks, the capped Kelly sizer, the risk check and the paper broker. Nothing is sent to a server.</p>
     <p>One step is different. In Claude Code an <b>AI analyst agent</b> writes the trade plan. Here a rule-based planner follows the same written rules: a stop below recent structure and at least 1.5 ATR away, a target at your minimum reward to risk, and one of the four setups the backtester can test. The AI replay tab shows the real agents at work.</p>
     <h3>Data</h3>
-    <p><b>Latest:</b> daily bars for the watchlist plus SPY, QQQ and VIX, refreshed by this site's GitHub Actions workflow each weekday after the US close using the open-source <a href="https://github.com/ranaroussi/yfinance">yfinance</a> library. Prices are split and dividend adjusted. This is end-of-day data, not a live feed.</p>
+    <p><b>Latest:</b> daily bars for the watchlist (20 stocks and four commodity ETFs: GLD gold, SLV silver, USO crude oil, DBC a broad basket) plus SPY, QQQ and VIX, refreshed by this site's GitHub Actions workflow each weekday after the US close using the open-source <a href="https://github.com/ranaroussi/yfinance">yfinance</a> library. Prices are split and dividend adjusted. Intraday 5-minute bars are refreshed about every 30 minutes during US market hours and are delayed by 15 minutes or more. This is not a live feed.</p>
+    <h3>Analyst view</h3>
+    <p>The analyst view follows what an equity research desk does: a factor scorecard (trend, momentum, relative strength against SPY, volume, volatility, position in the 52-week range, market regime); an up or down probability taken from the instrument's own history, counting what happened 20 sessions after past days in the same state (above or below the 50 and 200 day averages, and the RSI band); bull, base and bear scenarios from the quartiles of those outcomes; key levels from swing points, moving averages and the 52-week range; and a one-sigma cone from recent realised volatility. None of it is a forecast. It is the base rate, shown honestly.</p>
     <p><b>2012 to 2017:</b> real daily prices for 20 US stocks from the <a href="https://github.com/yumoxu/stocknet-dataset">stocknet dataset</a>, SPY rebuilt from <a href="https://github.com/quantopian/zipline">zipline</a>'s daily return series, and VIX from <a href="https://github.com/datasets/finance-vix">datasets/finance-vix</a>, all loaded straight from GitHub.</p>
     <h3>Chart advice</h3>
     <p>For any stock on the watchlist, the plan is drawn on a candlestick chart with the 20, 50 and 200 day averages. The timing instructions follow the desk's rules: entries are placed before the next session's open, as a limit or a buy stop-limit, and expire if not filled that day. The sliders change only the stop and the target; the shares, loss, gain and expected value update from the same sizing caps the desk uses.</p>
@@ -287,9 +326,10 @@ const nodash = (s) => String(s ?? "").replace(/\s+[\u2014\u2013]\s+/g, ", ").rep
 const num = (el) => Number(String(el.value).replace(/[^0-9.]/g, "")) || 0;
 
 const WATCH = {
-  live: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AVGO", "TSLA", "JPM", "V", "MA", "UNH", "LLY", "COST", "HD", "NFLX", "AMD", "XOM", "BA", "CAT"],
+  live: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AVGO", "TSLA", "JPM", "V", "MA", "UNH", "LLY", "COST", "HD", "NFLX", "AMD", "XOM", "BA", "CAT", "GLD", "SLV", "USO", "DBC"],
   hist2017: ["AAPL", "AMZN", "MSFT", "GOOG", "FB", "INTC", "CSCO", "JPM", "BAC", "V", "MA", "HD", "UNH", "BA", "CAT", "DIS", "MCD", "PCLN", "CELG", "XOM"],
 };
+const NAMES = { GLD: "gold", SLV: "silver", USO: "crude oil", DBC: "commodities basket" };
 const state = { tab: "advice", ds: "live", info: {}, watch: {}, kelly: 0.25, rr: 2, every: 10, busy: false };
 
 /* ---------------- worker ---------------- */
@@ -486,7 +526,7 @@ function candidateCard(c, barsJson) {
 let chartState = null;
 function renderSymChips(active) {
   const list = [...state.watch[state.ds]];
-  $("#symChips").innerHTML = list.map((s) => `<button class="chip" data-s="${s}" aria-pressed="${s === active}">${s}</button>`).join("");
+  $("#symChips").innerHTML = list.map((s) => `<button class="chip" data-s="${s}" aria-pressed="${s === active}">${s}${NAMES[s] ? " · " + NAMES[s] : ""}</button>`).join("");
   $$("#symChips .chip").forEach((c) => c.addEventListener("click", () => runAnalyze(c.dataset.s)));
 }
 async function runAnalyze(sym) {
@@ -500,12 +540,12 @@ async function runAnalyze(sym) {
   } catch (e) { setStatus("Error: " + e.message); }
   setBusy(false);
 }
-function candles(ch, levels, w = 920, h = 360) {
-  const L = 56, R = 16, T = 14, B = 28, bars = ch.bars, n = bars.length;
-  const vals = bars.flatMap((b) => [b[2], b[3]]).concat(levels.map((l) => l.v));
+function candles(ch, levels, w = 920, h = 360, cone = null) {
+  const L = 56, R = 16, T = 14, B = 28, bars = ch.bars, n = bars.length, ext = cone ? cone.length + 1 : 0, N = n + ext;
+  const vals = bars.flatMap((b) => [b[2], b[3]]).concat(levels.map((l) => l.v)).concat(cone ? cone.flatMap((c) => [c.lo, c.hi]) : []);
   let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
-  const x = (i) => L + (w - L - R) * (i + 0.5) / n, y = (v) => T + (h - T - B) * (hi - v) / (hi - lo);
-  const cw = Math.max(2, (w - L - R) / n * 0.62);
+  const x = (i) => L + (w - L - R) * (i + 0.5) / N, y = (v) => T + (h - T - B) * (hi - v) / (hi - lo);
+  const cw = Math.max(2, (w - L - R) / N * 0.62);
   let g = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img">`;
   for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; g += `<line class="gl" x1="${L}" x2="${w - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, 2)}</text>`; }
   const step = Math.max(1, Math.floor(n / 6));
@@ -518,9 +558,28 @@ function candles(ch, levels, w = 920, h = 360) {
     g += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(b[2])}" y2="${y(b[3])}" stroke="currentColor" stroke-width="1"/>`;
     g += `<rect x="${x(i) - cw / 2}" y="${top}" width="${cw}" height="${Math.max(1, bot - top)}" fill="${up ? "var(--bg)" : "currentColor"}" stroke="currentColor" stroke-width="1"/>`;
   });
+  if (cone) {
+    const last = bars[n - 1][4];
+    const up = cone.map((c, k) => `${x(n + k).toFixed(1)},${y(c.hi).toFixed(1)}`), dn = cone.map((c, k) => `${x(n + k).toFixed(1)},${y(c.lo).toFixed(1)}`).reverse();
+    g += `<polygon points="${x(n - 1).toFixed(1)},${y(last).toFixed(1)} ${up.join(" ")} ${dn.join(" ")}" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>`;
+    g += `<polyline points="${x(n - 1).toFixed(1)},${y(last).toFixed(1)} ${cone.map((c, k) => `${x(n + k).toFixed(1)},${y(c.mid).toFixed(1)}`).join(" ")}" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+    g += `<line x1="${x(n - 0.5)}" x2="${x(n - 0.5)}" y1="${T}" y2="${h - B}" stroke="currentColor" stroke-opacity=".25"/>`;
+    g += `<text class="ax" x="${x(n + cone.length / 2)}" y="${h - 8}" text-anchor="middle">next ${cone.length} sessions, 1 sigma</text>`;
+  }
   const lv = [...levels].sort((a, b) => b.v - a.v); let lastY = -99;
   for (const l of lv) { let ty = y(l.v) - 6; if (ty - lastY < 14) ty = lastY + 14; lastY = ty;
     g += `<line x1="${L}" x2="${w - R}" y1="${y(l.v)}" y2="${y(l.v)}" stroke="currentColor" stroke-opacity="${l.o ?? .7}" stroke-dasharray="${l.dash || "6 4"}" stroke-width="1.3"/><text class="lv" x="${w - R - 4}" y="${ty}" text-anchor="end">${esc(l.t)}</text>`; }
+  return g + "</svg>";
+}
+function lineChart(pts, w = 920, h = 220, marks = []) {
+  const L = 56, R = 16, T = 14, B = 28, n = pts.length;
+  const vals = pts.map((p) => p[1]); let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo || 1) * 0.1; lo -= pad; hi += pad;
+  const x = (i) => L + (w - L - R) * i / Math.max(1, n - 1), y = (v) => T + (h - T - B) * (hi - v) / (hi - lo);
+  let g = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img">`;
+  for (let k = 0; k <= 3; k++) { const v = lo + (hi - lo) * k / 3; g += `<line class="gl" x1="${L}" x2="${w - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, 2)}</text>`; }
+  for (const m of marks) { g += `<line x1="${x(m.i)}" x2="${x(m.i)}" y1="${T}" y2="${h - B}" stroke="currentColor" stroke-opacity=".2"/><text class="ax" x="${x(m.i) + 4}" y="${h - 8}">${esc(m.t)}</text>`; }
+  g += `<polyline points="${pts.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>`;
+  const last = pts[n - 1]; g += `<circle cx="${x(n - 1)}" cy="${y(last[1])}" r="4" fill="currentColor"/><line x1="${L}" x2="${w - R}" y1="${y(last[1])}" y2="${y(last[1])}" stroke="currentColor" stroke-opacity=".3" stroke-dasharray="3 4"/><text class="lv" x="${w - R - 4}" y="${y(last[1]) - 8}" text-anchor="end">last ${fmt(last[1])}</text>`;
   return g + "</svg>";
 }
 function sizeFor(entry, stop, a) {
@@ -555,7 +614,7 @@ function renderChartAdvice(a) {
     $("#tgtV").textContent = fmt(tgt) + ` (+${fmt((tgt / entry - 1) * 100, 1)}%)`;
     const rr = (tgt - entry) / (entry - stop); const sz = sizeFor(worst, stop, a);
     const risk = sz.qty * (worst - stop), gain = sz.qty * (tgt - worst), ev = b.expectancy_r != null ? b.expectancy_r * risk : null;
-    $("#cv").innerHTML = candles(a.chart, [{ v: entry, t: `${p.entry_type === "stop_limit" ? "buy above" : "buy at"} ${fmt(entry)}`, o: .9 }, { v: stop, t: `stop ${fmt(stop)}`, dash: "2 4" }, { v: tgt, t: `target ${fmt(tgt)}`, dash: "8 4" }]);
+    $("#cv").innerHTML = candles(a.chart, [{ v: entry, t: `${p.entry_type === "stop_limit" ? "buy above" : "buy at"} ${fmt(entry)}`, o: .9 }, { v: stop, t: `stop ${fmt(stop)}`, dash: "2 4" }, { v: tgt, t: `target ${fmt(tgt)}`, dash: "8 4" }], 920, 360, a.note && a.note.cone);
     $("#rew").innerHTML = `<div><span>Reward to risk</span><b>${fmt(rr, 2)}</b></div><div><span>Shares</span><b>${sz.qty}</b></div><div><span>Cost</span><b>${usd(sz.qty * worst, 0)}</b></div><div><span>Loss at stop</span><b>${usd(-risk, 0)}</b></div><div><span>Gain at target</span><b>${usd(gain, 0)}</b></div><div><span>Expected per trade</span><b>${ev == null ? "n/a" : usd(ev, 0)}</b></div>`;
     const w = [];
     if (rr < a.profile.min_reward_risk - 1e-6) w.push(`Reward to risk ${fmt(rr, 2)} is below the desk minimum of ${a.profile.min_reward_risk}, so the risk check would reject this.`);
@@ -569,6 +628,38 @@ function renderChartAdvice(a) {
     $("#steps").innerHTML = [["When", when], ["Stop loss", `${fmt(stop)}, sent with the entry as a bracket order. Exit without question if hit.`], ["Target", `${fmt(tgt)}, a limit sell attached to the same bracket.`], ["Time stop", `Close at the next open if still held after ${p.max_hold} sessions. Past trades on this rule lasted ${b.avg_bars_held ? fmt(b.avg_bars_held, 0) : "n/a"} sessions on average.`], ["Gates", `Backtest ${b.verdict || "n/a"} (${b.trades || 0} trades, ${b.win_rate != null ? fmt(b.win_rate * 100, 0) + "% wins" : "n/a"}). Market ${a.regime.regime.replace("_", " ")}. ${sc.passed ? "Screen passed." : "Screen failed."} Desk verdict: ${c.verdict}.`]].map(([k, v]) => `<li><span>${k}</span><b>${esc(nodash(v))}</b></li>`).join("");
   };
   $("#stopS").addEventListener("input", update); $("#tgtS").addEventListener("input", update); update();
+  if (a.note) $("#chartBody").insertAdjacentHTML("afterbegin", analystNote(a));
+  if (state.ds === "live") loadIntraday(a.symbol);
+}
+function analystNote(a) {
+  const n = a.note, st = n.stats, br = n.base_rates, name = NAMES[n.symbol] ? ` ${NAMES[n.symbol]}` : "";
+  const pu = br.p_up == null ? null : Math.round(br.p_up * 100);
+  const dot = (sc) => `<i class="dot ${sc > 0 ? "up" : sc < 0 ? "down" : "flat"}"></i>`;
+  let h = `<div class="note"><div class="nhead"><h4>${esc(n.symbol)}${esc(name)} <span style="color:var(--muted);font-weight:400">analyst view</span></h4><div class="px">${fmt(n.close)}<small>${pct(n.change_pct, 2)} on the day · ${n.asof}</small></div></div>`;
+  h += `<div class="bias"><b>${esc(n.bias)}</b><span>${n.score > 0 ? "+" : ""}${n.score} of ${n.max_score} factor points, ${br.horizon} session view</span></div>`;
+  if (pu != null) h += `<div class="prob"><div class="track"><i style="width:${pu}%"></i>${br.p_up_all != null ? `<em style="left:${Math.round(br.p_up_all * 100)}%"></em>` : ""}</div><div class="lab"><span>${pu}% chance higher in ${br.horizon} sessions</span><span>${br.used === "matching" ? `from ${br.matching_days} past days in the same state` : `from all ${br.all_days} past days (too few matching days)`}${br.p_up_all != null ? `; all days ${Math.round(br.p_up_all * 100)}% (marker)` : ""}</span></div></div>`;
+  h += `<div class="ncols"><div><table class="score"><tbody>${n.factors.map((f) => `<tr><td>${dot(f.score)}${esc(f.factor)}</td><td>${esc(f.reading)}</td><td>${esc(nodash(f.why))}</td></tr>`).join("")}</tbody></table></div>`;
+  h += `<div><ul class="scen">${n.scenarios.map((s) => `<li><b>${esc(s.name)}</b><div><b>${fmt(s.price)}</b> <span>${pct(s.return_pct, 1)}</span></div><span>${esc(s.note)}</span></li>`).join("")}</ul>`;
+  const lv = [...n.levels.above].reverse().map((l) => `<li><span>${esc(l.label)}</span><b>${fmt(l.price)}</b></li>`).join("") + `<li class="now"><span>last</span><b>${fmt(n.close)}</b></li>` + n.levels.below.map((l) => `<li><span>${esc(l.label)}</span><b>${fmt(l.price)}</b></li>`).join("");
+  h += `<ul class="lv2" style="margin-top:14px">${lv}</ul></div></div>`;
+  const r = st.returns || {};
+  h += `<div class="stats"><div><span>1 week</span><b>${pct(r["5"])}</b></div><div><span>1 month</span><b>${pct(r["21"])}</b></div><div><span>3 months</span><b>${pct(r["63"])}</b></div><div><span>1 year</span><b>${pct(r["252"])}</b></div><div><span>Beta vs SPY</span><b>${fmt(st.beta, 2)}</b></div><div><span>Volatility, annual</span><b>${st.ann_vol_pct == null ? "n/a" : fmt(st.ann_vol_pct, 0) + "%"}</b></div><div><span>ATR, 14 day</span><b>${fmt(st.atr)} (${fmt(st.atr_pct, 1)}%)</b></div><div><span>RSI 14</span><b>${fmt(st.rsi14, 0)}</b></div></div>`;
+  h += `<p class="asof">Probabilities are base rates from this instrument's own history, not forecasts. The cone on the chart is one standard deviation of recent daily moves, centred on the median outcome of similar past days. Educational use only.</p>`;
+  h += `<div id="intra" class="intra"></div></div>`;
+  return h;
+}
+async function loadIntraday(sym) {
+  const el = $("#intra"); if (!el) return;
+  try {
+    const r = await fetch(`data/live/intraday/${sym}.csv`, { cache: "no-cache" }); if (!r.ok) throw new Error("none");
+    const rows = (await r.text()).trim().split("\n").slice(1).map((l) => l.split(","));
+    if (rows.length < 10) throw new Error("short");
+    const days = [...new Set(rows.map((r) => r[0].slice(0, 10)))]; const keep = days.slice(-2);
+    const pts = rows.filter((r) => keep.includes(r[0].slice(0, 10))).map((r) => [r[0], +r[4]]);
+    const marks = []; let prev = ""; pts.forEach((p, i) => { const d = p[0].slice(0, 10); if (d !== prev) { marks.push({ i, t: d.slice(5) }); prev = d; } });
+    const last = pts[pts.length - 1][0]; const hhmm = last.slice(11, 16); const meta = (state.info.live || {}).meta || {};
+    el.innerHTML = `<h4 style="font:600 17px var(--display);margin:22px 0 2px">Intraday, 5 minute bars</h4><p class="sub">Last ${keep.length} sessions. Latest bar ${last.slice(0, 10)} ${hhmm} ET. Delayed data, refreshed about every 30 minutes during US market hours${meta.fetched_at ? `; fetched ${meta.fetched_at.slice(0, 16).replace("T", " ")} UTC` : ""}.</p>` + lineChart(pts, 920, 220, marks);
+  } catch (e) { el.innerHTML = `<p class="asof">Intraday bars are not available for ${esc(sym)} yet; they are published during US market hours.</p>`; }
 }
 
 /* ---------------- simulate ---------------- */

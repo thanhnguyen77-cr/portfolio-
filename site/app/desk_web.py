@@ -275,7 +275,8 @@ def analyze_symbol(ds: str, asof: str, sym: str, settings: dict, setup: Optional
              "sma20": f["sma20"][-n:], "sma50": f["sma50"][-n:], "sma200": f["sma200"][-n:],
              "high20": f["high20"][-n:], "low20": f["low20"][-n:]}
     return tl.clean_floats({"symbol": sym, "asof": asof, "next_session": nxt, "regime": reg, "screen": screen,
-                            "candidate": c, "chart": chart, "profile": {k: prof[k] for k in
+                            "candidate": c, "chart": chart, "note": analyst_note(ds, sym, asof),
+                            "profile": {k: prof[k] for k in
                             ("budget", "cash_reserve", "max_position_value", "max_risk_per_trade_pct",
                              "kelly_fraction", "min_reward_risk")}}, 4)
 
@@ -412,3 +413,167 @@ def bars_json(ds: str, sym: str, asof: str, n: int = 120) -> str:
 
 def to_json(obj: Any) -> str:
     return json.dumps(obj, default=str)
+
+
+# ------------------------------------------------------------------ analyst note
+
+def _ema(xs: list, n: int) -> list:
+    return tl.ema(xs, n)
+
+
+def _pct_rank(xs: list, v: float) -> float:
+    xs = sorted(x for x in xs if x is not None)
+    if not xs:
+        return 0.5
+    k = sum(1 for x in xs if x <= v)
+    return k / len(xs)
+
+
+def _quantile(xs: list, q: float) -> Optional[float]:
+    xs = sorted(xs)
+    if not xs:
+        return None
+    pos = (len(xs) - 1) * q
+    lo, hi = int(math.floor(pos)), int(math.ceil(pos))
+    return xs[lo] + (xs[hi] - xs[lo]) * (pos - lo)
+
+
+def _state_key(f: dict, i: int) -> Optional[tuple]:
+    c, s50, s200, r = f["close"][i], f["sma50"][i], f["sma200"][i], f["rsi14"][i]
+    if s50 is None or s200 is None or r is None:
+        return None
+    return (c > s50, c > s200, "low" if r < 40 else ("mid" if r <= 60 else "high"))
+
+
+def analyst_note(ds: str, sym: str, asof: str, horizon: int = 20) -> dict:
+    """A research-desk style read: factors, base rates from the stock's own history, scenarios, levels, cone."""
+    bs = bars_upto(ds, sym, asof)
+    f = tl.indicator_frame(bs)
+    i = len(bs) - 1
+    c = f["close"]
+    close = c[i]
+    atr = f["atr14"][i] or 0.0
+    # momentum and volatility
+    ema12, ema26 = _ema(c, 12), _ema(c, 26)
+    macd = [a - b if (a is not None and b is not None) else None for a, b in zip(ema12, ema26)]
+    valid = [m for m in macd if m is not None]
+    sig = _ema(valid, 9) if len(valid) >= 9 else []
+    hist = (macd[i] - sig[-1]) if (macd[i] is not None and sig and sig[-1] is not None) else None
+    rets = [c[k] / c[k - 1] - 1 for k in range(max(1, i - 19), i + 1)]
+    vol20 = tl.stdev(rets) if len(rets) > 2 else None
+    ann_vol = vol20 * math.sqrt(252) * 100 if vol20 else None
+    atr_pct = atr / close * 100 if close else None
+    atr_hist = [a / cc * 100 for a, cc in zip(f["atr14"][max(0, i - 252):i], c[max(0, i - 252):i]) if a and cc]
+    vol_rank = _pct_rank(atr_hist, atr_pct) if atr_pct else 0.5
+    sma20, sma50, sma200 = f["sma20"][i], f["sma50"][i], f["sma200"][i]
+    slope50 = tl.pct(sma50, f["sma50"][i - 10]) if i >= 10 and sma50 and f["sma50"][i - 10] else None
+    slope200 = tl.pct(sma200, f["sma200"][i - 20]) if i >= 20 and sma200 and f["sma200"][i - 20] else None
+    ret = {n: tl.pct(close, c[i - n]) if i >= n else None for n in (5, 21, 63, 126, 252)}
+    hi252 = max(f["high"][max(0, i - 251):i + 1])
+    lo252 = min(f["low"][max(0, i - 251):i + 1])
+    pos52 = (close - lo252) / (hi252 - lo252) * 100 if hi252 > lo252 else 50
+    # relative strength and beta vs SPY
+    spy = bars_upto(ds, "SPY", asof)
+    rs63 = beta = None
+    if len(spy) > 70:
+        sc_ = [b["close"] for b in spy]
+        j = len(sc_) - 1
+        spy_ret63 = tl.pct(sc_[j], sc_[j - 63])
+        rs63 = (ret[63] - spy_ret63) if (ret[63] is not None and spy_ret63 is not None) else None
+        n = min(60, i, j)
+        xs = [sc_[j - k] / sc_[j - k - 1] - 1 for k in range(n)]
+        ys = [c[i - k] / c[i - k - 1] - 1 for k in range(n)]
+        mx, my = sum(xs) / n, sum(ys) / n
+        var = sum((x - mx) ** 2 for x in xs)
+        beta = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var if var else None
+    # volume: on-balance volume slope and relative volume
+    obv = [0.0]
+    for k in range(1, i + 1):
+        obv.append(obv[-1] + (f["volume"][k] if c[k] > c[k - 1] else -f["volume"][k] if c[k] < c[k - 1] else 0))
+    obv_slope = (obv[i] - obv[i - 20]) / (sum(f["volume"][i - 19:i + 1]) or 1) if i >= 20 else None
+    rel_vol = f["volume"][i] / f["vol_avg20"][i - 1] if i >= 1 and f["vol_avg20"][i - 1] else None
+
+    # factor scorecard
+    def factor(name, score, reading, why):
+        return {"factor": name, "score": score, "reading": reading, "why": why}
+    facts = []
+    if sma50 and sma200:
+        t = 1 if close > sma50 > sma200 else (-1 if close < sma50 < sma200 else 0)
+        facts.append(factor("Trend", t, "Bullish" if t > 0 else ("Bearish" if t < 0 else "Mixed"),
+                            f"close {close:.2f} vs 50 day {sma50:.2f} and 200 day {sma200:.2f}; 50 day slope {slope50:+.1f}% over 10 sessions" if slope50 is not None else ""))
+    r14 = f["rsi14"][i]
+    if r14 is not None:
+        m = 1 if (r14 > 55 and (hist or 0) > 0) else (-1 if (r14 < 45 and (hist or 0) < 0) else 0)
+        facts.append(factor("Momentum", m, "Positive" if m > 0 else ("Negative" if m < 0 else "Neutral"),
+                            f"RSI 14 at {r14:.0f}; MACD histogram {'above' if (hist or 0) > 0 else 'below'} zero; 1 month {ret[21]:+.1f}%" if ret[21] is not None else f"RSI 14 at {r14:.0f}"))
+    if rs63 is not None:
+        s = 1 if rs63 > 3 else (-1 if rs63 < -3 else 0)
+        facts.append(factor("Relative strength", s, "Leading" if s > 0 else ("Lagging" if s < 0 else "In line"),
+                            f"{rs63:+.1f} points vs SPY over 3 months"))
+    if obv_slope is not None:
+        v = 1 if obv_slope > 0.1 else (-1 if obv_slope < -0.1 else 0)
+        facts.append(factor("Volume", v, "Accumulation" if v > 0 else ("Distribution" if v < 0 else "Balanced"),
+                            f"on-balance volume {'rising' if obv_slope > 0 else 'falling'} over 20 sessions; today's volume {rel_vol:.2f}x average" if rel_vol else ""))
+    if atr_pct is not None:
+        v = -1 if vol_rank > 0.8 else (1 if vol_rank < 0.3 else 0)
+        facts.append(factor("Volatility", v, "Elevated" if vol_rank > 0.8 else ("Calm" if vol_rank < 0.3 else "Normal"),
+                            f"ATR {atr_pct:.1f}% of price, {vol_rank * 100:.0f}th percentile of its own year; realised vol {ann_vol:.0f}% annualised" if ann_vol else ""))
+    p = 1 if pos52 > 80 else (-1 if pos52 < 25 else 0)
+    facts.append(factor("52-week range", p, "Near highs" if p > 0 else ("Near lows" if p < 0 else "Mid range"),
+                        f"{pos52:.0f}% of the way from the 52-week low {lo252:.2f} to the high {hi252:.2f}"))
+    reg = _regime(ds, asof)
+    rg = {"risk_on": 1, "caution": 0, "risk_off": -1}[reg["regime"]]
+    facts.append(factor("Market", rg, reg["regime"].replace("_", " "), f"{reg['points']} of {reg['max_points']} regime points"))
+    total = sum(x["score"] for x in facts)
+    bias = "Bullish" if total >= 3 else ("Bearish" if total <= -3 else ("Lean bullish" if total > 0 else ("Lean bearish" if total < 0 else "Neutral")))
+
+    # conditional base rates from this stock's own history
+    key = _state_key(f, i)
+    cond, uncond = [], []
+    for k in range(200, i - horizon):
+        fwd = c[k + horizon] / c[k] - 1
+        uncond.append(fwd)
+        if key and _state_key(f, k) == key:
+            cond.append(fwd)
+    use = cond if len(cond) >= 30 else uncond
+    base = {
+        "horizon": horizon, "state": {"above_50": key[0], "above_200": key[1], "rsi": key[2]} if key else None,
+        "matching_days": len(cond), "all_days": len(uncond), "used": "matching" if len(cond) >= 30 else "all",
+        "p_up": (sum(1 for x in use if x > 0) / len(use)) if use else None,
+        "median": _quantile(use, 0.5), "p25": _quantile(use, 0.25), "p75": _quantile(use, 0.75),
+        "p10": _quantile(use, 0.1), "p90": _quantile(use, 0.9),
+        "p_up_all": (sum(1 for x in uncond if x > 0) / len(uncond)) if uncond else None,
+    }
+    scen = []
+    for name, q, prob in (("Bull", base["p75"], "1 in 4 chance of at least this"), ("Base", base["median"], "the middle outcome"),
+                          ("Bear", base["p25"], "1 in 4 chance of this or worse")):
+        if q is not None:
+            scen.append({"name": name, "return_pct": q * 100, "price": close * (1 + q), "note": prob})
+    # projection cone (1 sigma from realised vol) and median path
+    cone = []
+    if vol20:
+        for h in range(1, horizon + 1):
+            sd = vol20 * math.sqrt(h)
+            med = (base["median"] or 0) * h / horizon
+            cone.append({"h": h, "lo": close * (1 + med - sd), "hi": close * (1 + med + sd), "mid": close * (1 + med)})
+    # key levels: recent swing points, moving averages, 20 day and 52 week extremes
+    levels = []
+    for k in range(max(2, i - 60), i - 1):
+        if f["high"][k] >= max(f["high"][k - 2:k + 3]):
+            levels.append({"price": f["high"][k], "kind": "resistance", "label": f"swing high {f['time'][k][:10]}"})
+        if f["low"][k] <= min(f["low"][k - 2:k + 3]):
+            levels.append({"price": f["low"][k], "kind": "support", "label": f"swing low {f['time'][k][:10]}"})
+    for lab, v in (("20 day average", sma20), ("50 day average", sma50), ("200 day average", sma200),
+                   ("52-week high", hi252), ("52-week low", lo252)):
+        if v:
+            levels.append({"price": v, "kind": "resistance" if v > close else "support", "label": lab})
+    above = sorted([l for l in levels if l["price"] > close], key=lambda l: l["price"])[:3]
+    below = sorted([l for l in levels if l["price"] <= close], key=lambda l: -l["price"])[:3]
+    return tl.clean_floats({
+        "symbol": sym, "asof": asof, "close": close, "change_pct": tl.pct(close, c[i - 1]) if i else None,
+        "bias": bias, "score": total, "max_score": len(facts), "factors": facts, "base_rates": base, "scenarios": scen,
+        "cone": cone, "levels": {"above": above, "below": below},
+        "stats": {"atr": atr, "atr_pct": atr_pct, "ann_vol_pct": ann_vol, "beta": beta, "rsi14": r14, "macd_hist": hist,
+                  "returns": {str(k): v for k, v in ret.items()}, "pos52": pos52, "rel_vol": rel_vol,
+                  "sma20": sma20, "sma50": sma50, "sma200": sma200, "slope50": slope50, "slope200": slope200},
+    }, 4)

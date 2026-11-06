@@ -22,7 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 WATCHLIST = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AVGO", "TSLA", "JPM", "V", "MA", "UNH", "LLY",
-             "COST", "HD", "NFLX", "AMD", "XOM", "BA", "CAT"]
+             "COST", "HD", "NFLX", "AMD", "XOM", "BA", "CAT",
+             "GLD", "SLV", "USO", "DBC"]   # commodity ETFs: gold, silver, oil, broad basket
 INDEXES = {"SPY": "SPY", "QQQ": "QQQ", "VIX": "^VIX"}
 
 
@@ -64,10 +65,20 @@ def via_stooq(ticker: str) -> list[tuple]:
     return rows
 
 
+def intraday(ticker: str) -> list[tuple]:
+    """5-minute bars for the last 5 sessions (Yahoo data, delayed)."""
+    import yfinance as yf
+    df = yf.Ticker(ticker).history(period="5d", interval="5m", auto_adjust=False)
+    df = df.dropna(subset=["Close"])
+    return [(i.strftime("%Y-%m-%dT%H:%M%z"), r["Open"], r["High"], r["Low"], r["Close"], r.get("Volume", 0))
+            for i, r in df.iterrows()]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--years", type=int, default=8)
+    ap.add_argument("--intraday", action="store_true", help="also fetch 5-minute bars for the last 5 sessions")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -93,11 +104,25 @@ def main() -> int:
     if "SPY" not in done or len(done) < 10:
         print(f"too little data fetched ({len(done)} symbols); not publishing", file=sys.stderr)
         return 1
+    intra_done = []
+    if a.intraday:
+        (out / "intraday").mkdir(exist_ok=True)
+        for name, ticker in [(s, s) for s in WATCHLIST] + [("SPY", "SPY"), ("QQQ", "QQQ")]:
+            try:
+                rows = intraday(ticker)
+                if len(rows) > 20:
+                    write(out / "intraday" / f"{name}.csv", rows)
+                    intra_done.append(name)
+            except Exception as e:  # noqa: BLE001
+                print(f"{name}: intraday failed: {e}", file=sys.stderr)
+            time.sleep(0.5)
+        print(f"intraday: {len(intra_done)} symbols")
     last = max(open(out / f"{s}.csv").read().strip().splitlines()[-1].split(",")[0] for s in done)
     (out / "meta.json").write_text(json.dumps({
-        "symbols": done, "failed": failed, "sources": sources, "last_date": last,
+        "symbols": done, "failed": failed, "sources": sources, "last_date": last, "intraday": intra_done,
         "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "note": "Daily bars, split and dividend adjusted. End of day, not a live feed."}, indent=1))
+        "note": "Daily bars, split and dividend adjusted. Intraday 5-minute bars are delayed by 15 minutes or "
+                "more and refreshed every 30 minutes during US market hours. Not a live feed."}, indent=1))
     print(f"published {len(done)} symbols, last bar {last}; failed: {failed or 'none'}")
     return 0
 

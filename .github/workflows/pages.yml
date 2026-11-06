@@ -10,7 +10,8 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "37 22 * * 1-5"   # weekdays, after the US close
+    - cron: "37 22 * * 1-5"        # weekdays, after the US close: full daily refresh
+    - cron: "5,35 13-21 * * 1-5"   # every 30 minutes through US market hours: intraday refresh
 
 permissions:
   contents: read
@@ -37,7 +38,7 @@ jobs:
         continue-on-error: true
         run: |
           pip install --quiet yfinance
-          python tools/fetch_live_data.py --out _live
+          python tools/fetch_live_data.py --out _live --intraday
 
       - name: Keep the previous data if today's fetch failed
         if: github.event_name != 'pull_request'
