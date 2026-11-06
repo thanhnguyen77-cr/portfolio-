@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Skill for Claude</title>
+<meta name="description" content="An 11-agent trading desk for Claude on TradingView and Alpaca: screener, analyst, backtester, Kelly position sizer, news desk, alerts, risk manager with veto, paper-trading broker and journal.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Cpath d='M6 22l6-7 5 4 9-11' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f7f4;
+  --surface: #ffffff;
+  --surface-2: #eef1ee;
+  --text: #16201d;
+  --muted: #55625d;
+  --line: #d9dfdb;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-soft: #d7efe9;
+  --up: #15803d;
+  --down: #b42318;
+  --warn-bg: #fff6e0;
+  --warn-line: #e9c46a;
+  --warn-text: #5c4300;
+  --code-bg: #10201c;
+  --code-text: #e3f3ee;
+  --shadow: 0 1px 2px rgba(16, 32, 28, .06), 0 8px 24px rgba(16, 32, 28, .06);
+  --radius: 14px;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1311;
+    --surface: #131c19;
+    --surface-2: #1a2522;
+    --text: #e6eeeb;
+    --muted: #9aaaa4;
+    --line: #26332f;
+    --accent: #2dd4bf;
+    --accent-ink: #062a25;
+    --accent-soft: #123a34;
+    --up: #4ade80;
+    --down: #f87171;
+    --warn-bg: #2a2310;
+    --warn-line: #6b5a1d;
+    --warn-text: #f3dd9b;
+    --code-bg: #08100e;
+    --code-text: #d5ece5;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 var(--sans);
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 720px) { .wrap { padding: 0 28px; } }
+
+/* header */
+.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+.brand svg { flex: none; }
+.top nav { display: flex; gap: 18px; font-size: 15px; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--text); }
+@media (max-width: 640px) { .top nav .hide-sm { display: none; } }
+
+/* hero */
+.hero { padding: 64px 0 40px; }
+.eyebrow { display: inline-block; font: 600 13px/1 var(--mono); letter-spacing: .04em; color: var(--accent);
+  background: var(--accent-soft); padding: 7px 10px; border-radius: 999px; }
+h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.08; letter-spacing: -.02em; margin: 18px 0 16px; max-width: 18ch; }
+.lede { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-weight: 600;
+  text-decoration: none; border: 1px solid var(--line); color: var(--text); background: var(--surface); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:hover { filter: brightness(1.05); }
+
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 44px; }
+@media (min-width: 720px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.stat b { display: block; font: 700 28px/1.1 var(--mono); }
+.stat span { color: var(--muted); font-size: 14px; }
+
+/* notice */
+.notice { margin: 8px 0 0; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text);
+  border-radius: var(--radius); padding: 14px 18px; font-size: 15px; }
+
+/* sections */
+section { padding: 56px 0; border-top: 1px solid var(--line); }
+h2 { font-size: clamp(26px, 3.6vw, 34px); line-height: 1.15; letter-spacing: -.01em; margin: 0 0 10px; }
+.sub { color: var(--muted); margin: 0 0 30px; max-width: 64ch; }
+
+/* pipeline */
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: step; }
+.flow li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.num { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  font: 700 15px var(--mono); background: var(--accent-soft); color: var(--accent); }
+.flow li.human .num { background: var(--accent); color: var(--accent-ink); }
+.flow h3 { margin: 0; font-size: 17px; }
+.flow .who { font: 13px var(--mono); color: var(--muted); }
+.flow p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.flow li > p, .flow li > .gate { grid-column: 2; }
+@media (max-width: 859px) { .gate.none { display: none; } }
+.gate { display: inline-block; justify-self: start; margin-top: 8px; font: 600 12.5px/1.4 var(--mono); padding: 3px 8px; border-radius: 6px;
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+@media (min-width: 860px) {
+  .flow li { grid-template-columns: 40px 1.1fr 1.6fr auto; align-items: center; }
+  .flow li > p, .flow li > .gate { grid-column: auto; }
+  .flow p { margin: 0; }
+  .gate { margin: 0; white-space: nowrap; }
+}
+
+/* agents */
+.grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.card h3 { margin: 0 0 2px; font-size: 16px; }
+.card code { font: 12.5px var(--mono); color: var(--accent); }
+.card p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
+
+/* safety */
+.locks { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .locks { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.lock { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.lock .k { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.lock h3 { margin: 6px 0 8px; font-size: 18px; }
+.lock p { margin: 0; color: var(--muted); font-size: 15px; }
+.bullets { margin: 24px 0 0; padding-left: 20px; color: var(--muted); }
+.bullets li { margin: 6px 0; }
+.bullets b { color: var(--text); }
+
+/* install */
+.cols { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .cols { grid-template-columns: 1fr 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; min-width: 0; }
+.panel h3 { margin: 0 0 6px; font-size: 18px; }
+.panel p { margin: 0 0 12px; color: var(--muted); font-size: 15px; }
+.code { position: relative; margin: 10px 0 0; }
+pre { margin: 0; background: var(--code-bg); color: var(--code-text); border-radius: 10px; padding: 14px 16px;
+  font: 13.5px/1.6 var(--mono); overflow-x: auto; white-space: pre; padding-top: 40px; }
+.code::before { content: attr(data-label); position: absolute; top: 12px; left: 16px; font: 600 11px var(--mono);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--code-text); opacity: .55; }
+.copy { position: absolute; top: 7px; right: 8px; font: 600 12px var(--sans); padding: 5px 9px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: var(--code-text); cursor: pointer; }
+.copy:hover { background: rgba(255,255,255,.16); }
+ol.steps { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+ol.steps li { margin: 6px 0; }
+ol.steps b { color: var(--text); }
+
+/* methodology */
+.math { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .math { grid-template-columns: 1fr 1fr; } }
+.formula { font: 600 clamp(18px, 2.6vw, 22px) var(--mono); background: var(--surface-2); border-radius: 10px; padding: 14px 16px; margin: 6px 0 12px;
+  overflow-x: auto; }
+.verdicts { display: grid; gap: 8px; margin: 10px 0 0; }
+.v { display: grid; grid-template-columns: 170px 1fr; gap: 10px; font-size: 14.5px; color: var(--muted); align-items: baseline; }
+.v b { font: 700 12.5px var(--mono); padding: 3px 8px; border-radius: 6px; justify-self: start; }
+.v .pass { background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); }
+.v .fail { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
+.v .meh { background: var(--surface-2); color: var(--text); }
+@media (max-width: 480px) { .v { grid-template-columns: 1fr; gap: 2px; } }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M6 22l6-7 5 4 9-11" fill="none" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Trader Skill
+    </a>
+    <nav>
+      <a href="#flow" class="hide-sm">How it works</a>
+      <a href="#agents" class="hide-sm">Agents</a>
+      <a href="#safety" class="hide-sm">Safety</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/thanhnguyen77-cr/portfolio-">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <span class="eyebrow">CLAUDE CODE PLUGIN · TRADINGVIEW + ALPACA</span>
+    <h1>An 11-agent trading desk for Claude.</h1>
+    <p class="lede">Eleven agents scan your TradingView watchlist, plan the best setup and backtest its rule over years of history after fees. They size the trade with a capped Kelly Criterion, watch the news, set alerts, and place a paper order on Alpaca. A risk manager has the final veto, and a hook enforces it.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">Install the plugin</a>
+      <a class="btn" href="trader-skill.zip" download>Download skill (.zip)</a>
+      <a class="btn" href="https://github.com/thanhnguyen77-cr/portfolio-">View source</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>11</b><span>specialised agents</span></div>
+      <div class="stat"><b>1%</b><span>default max risk per trade</span></div>
+      <div class="stat"><b>¼</b><span>Kelly, with a shrunk win rate</span></div>
+      <div class="stat"><b>0</b><span>orders without an approval ticket</span></div>
+    </div>
+    <p class="notice"><b>Not financial advice.</b> This is a decision-support and paper-trading tool. Backtests describe the past, stops can gap, and you are responsible for every order. The desk starts in paper mode and cannot switch itself to live trading.</p>
+  </div>
+
+  <section id="flow">
+    <div class="wrap">
+      <h2>How a trade flows</h2>
+      <p class="sub">Each step writes its results to files and has a gate. The desk stops at the first gate that fails, and "no trade" is a normal, frequent outcome. Every number comes from a connector or a tested Python script, never from the model's head.</p>
+      <ol class="flow">
+        <li><span class="num">0</span><div><h3>Market regime</h3><div class="who">trader-market-regime · regime.py</div></div><p>Trend of SPY and QQQ against their 50- and 200-day averages, plus the VIX level, gives one label: risk_on, caution or risk_off.</p><span class="gate">risk_off → no new longs</span></li>
+        <li><span class="num">1</span><div><h3>Scan the watchlist</h3><div class="who">trader-screener · screen.py</div></div><p>Filters for trend, RSI band, volume, volatility and liquidity. Survivors get a score from 0 to 100 and a setup label.</p><span class="gate">≥ 1 survivor</span></li>
+        <li><span class="num">2</span><div><h3>Trade plan</h3><div class="who">trader-analyst</div></div><p>Exact entry, stop and target, why the trade makes sense, and what would prove it wrong.</p><span class="gate">reward:risk ≥ 2</span></li>
+        <li><span class="num">3</span><div><h3>Backtest</h3><div class="who">trader-backtester · backtest.py</div></div><p>Replays the plan's rule over 5+ years of history and on peer stocks, after slippage and fees, with out-of-sample and sensitivity checks.</p><span class="gate">verdict PASS</span></li>
+        <li><span class="num">4</span><div><h3>News check</h3><div class="who">trader-news-desk</div></div><p>Earnings date, filings, analyst actions and headlines, rated green, amber or red. It can keep watching while a trade is live.</p><span class="gate">not red</span></li>
+        <li><span class="num">5</span><div><h3>Position size</h3><div class="who">trader-position-sizer · kelly.py</div></div><p>Fractional Kelly using live account balances, capped by risk per trade, max per stock, the cash reserve and total exposure.</p><span class="gate">≥ 1 share</span></li>
+        <li><span class="num">6</span><div><h3>Price alerts</h3><div class="who">trader-alerts</div></div><p>TradingView alerts at the entry and invalidation levels, so your phone pings when price gets there.</p><span class="gate none">—</span></li>
+        <li class="human"><span class="num">7</span><div><h3>You confirm</h3><div class="who">you + desk lead</div></div><p>An order card with shares, prices, cost, dollars at risk, backtest, news and regime. Nothing goes ahead without your explicit yes.</p><span class="gate">your "yes"</span></li>
+        <li><span class="num">8</span><div><h3>Risk check</h3><div class="who">trader-risk-manager · risk_check.py</div></div><p>About 20 rules checked against a fresh account snapshot. Passing them issues a single-use approval ticket that expires after 30 minutes.</p><span class="gate">APPROVE</span></li>
+        <li><span class="num">9</span><div><h3>Paper order</h3><div class="who">trader-broker</div></div><p>A bracket order on Alpaca paper, with protective stop and take-profit, placed exactly as approved.</p><span class="gate">accepted</span></li>
+        <li><span class="num">10</span><div><h3>Journal</h3><div class="who">trader-journal · journal.py</div></div><p>Logs fills, compares real results with the backtest, and writes up lessons.</p><span class="gate none">—</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="agents">
+    <div class="wrap">
+      <h2>The eleven agents</h2>
+      <p class="sub">Each agent has one job and a written procedure. Only the broker can touch orders; the other ten have order tools removed.</p>
+      <div class="grid">
+        <div class="card"><h3>Onboarding</h3><code>trader-onboarding</code><p>Turns your budget, cash to keep aside and max per stock into validated money rules. It also checks the connectors.</p></div>
+        <div class="card"><h3>Market regime</h3><code>trader-market-regime</code><p>Decides whether the market favours new longs at full size, half size or none.</p></div>
+        <div class="card"><h3>Screener</h3><code>trader-screener</code><p>Filters your watchlist down to the strongest setups and shows why the rest were cut.</p></div>
+        <div class="card"><h3>Analyst</h3><code>trader-analyst</code><p>Writes one precise plan with levels set by ATR and price structure, the reasoning behind it, and its invalidation conditions.</p></div>
+        <div class="card"><h3>Backtester</h3><code>trader-backtester</code><p>Tests the rule behind the plan, not just one chart, and returns an honest verdict.</p></div>
+        <div class="card"><h3>Position sizer</h3><code>trader-position-sizer</code><p>Sizes with capped, fractional Kelly. It usually recommends fewer shares than you'd expect.</p></div>
+        <div class="card"><h3>News desk</h3><code>trader-news-desk</code><p>Tracks earnings dates, filings and headlines, with a source for every item. Reports only what changed.</p></div>
+        <div class="card"><h3>Alerts</h3><code>trader-alerts</code><p>Creates TradingView alerts at your levels. If the connector can't create them, it gives you exact manual steps.</p></div>
+        <div class="card"><h3>Risk manager</h3><code>trader-risk-manager</code><p>Has veto power. Issues a single-use approval ticket only when every check passes.</p></div>
+        <div class="card"><h3>Broker</h3><code>trader-broker</code><p>Sends exactly what was approved, as a bracket order, or sends nothing at all.</p></div>
+        <div class="card"><h3>Journal</h3><code>trader-journal</code><p>Keeps the record straight and tells you whether your edge is real.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="wrap">
+      <h2>Built to say no</h2>
+      <p class="sub">Most trading bots are built to trade. This desk is built to stop bad trades.</p>
+      <div class="locks">
+        <div class="lock"><div class="k">Lock 1 · Chat</div><h3>You confirm every order</h3><p>The desk shows the full order card and waits for an explicit yes to that exact order. Any change starts over.</p></div>
+        <div class="lock"><div class="k">Lock 2 · Claude Code</div><h3>Permission prompt</h3><p>Keep Alpaca's order tools off auto-allow, and Claude Code asks you again before the call runs.</p></div>
+        <div class="lock"><div class="k">Lock 3 · Hook</div><h3>Order guard</h3><p>A PreToolUse hook blocks any order that has no matching, unexpired, unused risk-manager ticket. It also blocks entries without a protective stop.</p></div>
+      </div>
+      <ul class="bullets">
+        <li><b>Paper first.</b> Live trading needs two deliberate human edits: one in the Alpaca connector and one in <code>profile.json</code>. The agents can't make either change.</li>
+        <li><b>No made-up data.</b> Prices, indicators, dates and headlines must come from a connector or a script, with the source named.</li>
+        <li><b>No curve-fitting.</b> Agents may not loosen filters, lower costs or tweak parameters until something passes.</li>
+        <li><b>Long-only US stocks and ETFs.</b> Options and crypto orders are always blocked.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="sub">Choose Opus 5.5 with <code>/model</code>, install the plugin, then type <b>"install skill"</b>. The desk sets up its workspace, asks for your money rules and checks your connectors.</p>
+      <div class="cols">
+        <div class="panel">
+          <h3>Claude Code plugin <span style="color:var(--muted);font-weight:500">· recommended</span></h3>
+          <p>Installs the skill, all 11 agents and the order-guard hook.</p>
+          <div class="code" data-label="Claude Code"><pre><code>/plugin install trader --marketplace thanhnguyen77-cr/portfolio-</code></pre><button class="copy" type="button">Copy</button></div>
+          <p style="margin-top:14px">On older Claude Code versions:</p>
+          <div class="code" data-label="Claude Code"><pre><code>/plugin marketplace add thanhnguyen77-cr/portfolio-
+/plugin install trader@portfolio-trader</code></pre><button class="copy" type="button">Copy</button></div>
+        </div>
+        <div class="panel">
+          <h3>Standalone skill</h3>
+          <p>Download <a href="trader-skill.zip" download>trader-skill.zip</a>, then either:</p>
+          <ol class="steps">
+            <li>unzip it into <code>~/.claude/skills/</code> and type <b>"install skill"</b> in Claude Code. This installs the agents and the hook; or</li>
+            <li>upload it in claude.ai under <b>Customize → Skills</b>. There Claude plays each role in turn, and code execution must be on.</li>
+          </ol>
+        </div>
+        <div class="panel">
+          <h3>Connect Alpaca (paper)</h3>
+          <p>Use free paper-trading keys from the Alpaca dashboard. Name the server <code>alpaca</code>.</p>
+          <div class="code" data-label="Terminal"><pre><code>claude mcp add alpaca --scope user \
+  -e ALPACA_API_KEY=&lt;paper key&gt; \
+  -e ALPACA_SECRET_KEY=&lt;paper secret&gt; \
+  -e ALPACA_PAPER_TRADE=true \
+  -- uvx alpaca-mcp-server</code></pre><button class="copy" type="button">Copy</button></div>
+        </div>
+        <div class="panel">
+          <h3>Connect TradingView</h3>
+          <p>Add the TradingView connector in Claude's connector settings. It may need a paid TradingView plan. The agents find its tools by searching, so different connector versions work. If one is missing, the desk falls back to Alpaca data and manual alert steps.</p>
+          <p><a href="https://github.com/thanhnguyen77-cr/portfolio-/blob/main/plugins/trader/skills/trader/references/connectors.md">Full connector guide →</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="method">
+    <div class="wrap">
+      <h2>The maths, in the open</h2>
+      <p class="sub">All calculations are standard-library Python with unit tests. Agents run the scripts; they never do the arithmetic themselves.</p>
+      <div class="math">
+        <div class="panel">
+          <h3>Kelly, handled with care</h3>
+          <p>With a hard stop, a trade loses about 1R or wins about b·R. Kelly's fraction of capital to <em>risk</em> is:</p>
+          <div class="formula">f* = p − (1 − p) / b</div>
+          <ol class="steps">
+            <li>The win rate <b>p</b> is shrunk to its 1-sigma lower bound, so small samples count for less.</li>
+            <li>The desk uses <b>¼</b> of full Kelly, scaled by the market regime.</li>
+            <li>The result is capped by max risk per trade, max per stock, the cash reserve and total exposure. Usually the 1% risk cap decides the size.</li>
+          </ol>
+        </div>
+        <div class="panel">
+          <h3>Backtest verdicts</h3>
+          <p>Entries fill at the next open plus slippage. If a bar touches both stop and target, the stop counts first. The last 30% of history is held out.</p>
+          <div class="verdicts">
+            <div class="v"><b class="pass">PASS</b><span>Positive after costs and out of sample, robust to nearby settings, ≥ 0.1 R per trade.</span></div>
+            <div class="v"><b class="meh">INSUFFICIENT_TRADES</b><span>Fewer than 30 trades; add peers or history.</span></div>
+            <div class="v"><b class="meh">MARGINAL</b><span>Positive, but too thin to survive real execution.</span></div>
+            <div class="v"><b class="meh">FRAGILE</b><span>Works only at these exact settings, which suggests curve-fitting.</span></div>
+            <div class="v"><b class="fail">FAIL_OOS</b><span>Worked in the past, but not recently.</span></div>
+            <div class="v"><b class="fail">FAIL</b><span>No edge after costs.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Trader Skill · <a href="https://github.com/thanhnguyen77-cr/portfolio-">source on GitHub</a></span>
+    <span>Not affiliated with TradingView, Alpaca or Anthropic. Not financial advice.</span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var text = btn.parentElement.querySelector('code').innerText;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'Select & copy'; });
+    } else {
+      btn.textContent = 'Select & copy';
+    }
+  });
+});
+</script>
+</body>
+</html>
