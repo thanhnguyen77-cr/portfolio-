@@ -494,7 +494,7 @@ async function loadReplay() {
   const el = $("#replayOut");
   try {
     const r = await (await fetch("data/replay2017.json", { cache: "no-cache" })).json();
-    let h = `<div class="kpis"><div><span>Sessions</span><b>${r.sessions.length}</b></div><div><span>Agent runs</span><b>${r.sessions.reduce((a, s) => a + s.agents.length, 0)}</b></div><div><span>Orders placed</span><b>${r.orders}</b></div><div><span>Ending equity</span><b>${usd(r.end_equity, 0)}</b></div><div><span>Model cost</span><b>${usd(r.cost_usd, 0)}</b></div></div>`;
+    let h = `<div class="kpis"><div><span>Sessions</span><b>${r.sessions.length}</b></div><div><span>Agent runs</span><b>${r.sessions.reduce((a, s) => a + s.agents.length, 0)}</b></div><div><span>Orders placed</span><b>${r.orders}</b></div><div><span>Ending equity</span><b>${usd(r.end_equity, 0)}</b></div><div><span>Model usage</span><b>${usd(r.cost_usd, 0)}</b></div></div>`;
     h += `<p class="secsub">${esc(nodash(r.intro))}</p><ol class="tl">`;
     for (const s of r.sessions) {
       h += `<li><div class="d"><b>${esc(s.day_label)}</b><span>${esc(s.kind)} · ${s.minutes} min</span><div style="margin-top:10px">${s.chips.map((c) => `<span class="pill">${esc(nodash(c))}</span>`).join("")}</div></div><div>`;
