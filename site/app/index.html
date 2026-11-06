@@ -153,6 +153,42 @@ svg.chart .lv { font: 600 11px var(--font); fill: var(--text); }
 .prose p, .prose li { color: var(--muted); }
 .prose b { color: var(--text); }
 footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; color: var(--faint); font-size: 12px; text-align: center; }
+/* chart advice */
+.advice { background: var(--panel); border-radius: 22px; padding: 24px; margin-top: 18px; }
+.advice h4 { font: 600 22px var(--display); margin: 0; letter-spacing: -0.02em; }
+.advice .sub { color: var(--muted); font-size: 15px; margin: 4px 0 12px; }
+.plan { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+@media (min-width: 820px) { .plan { grid-template-columns: 1.1fr 1fr; } }
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.steps li:first-child { border-top: 0; }
+.steps li span { color: var(--muted); font-size: 13px; padding-top: 2px; }
+.steps li b { font-weight: 600; }
+.sliders { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.sliders label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin: 8px 0 2px; }
+.sliders label b { color: var(--text); font-variant-numeric: tabular-nums; }
+.rewards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px 16px; margin-top: 12px; }
+.rewards div span { display: block; font-size: 12px; color: var(--muted); }
+.rewards div b { font: 600 18px var(--display); font-variant-numeric: tabular-nums; }
+.warn { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.chips.small .chip { padding: 4px 10px; font-size: 13px; }
+/* cfd */
+.cfdgrid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .cfdgrid { grid-template-columns: 1fr 1fr; } }
+.cfdtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cfdtable th { font-size: 12px; color: var(--muted); font-weight: 500; text-align: left; padding: 4px 6px; border: 0; }
+.cfdtable td { padding: 4px 6px; border: 0; white-space: nowrap; }
+.cfdtable input { width: 100%; min-width: 64px; border: 1px solid var(--line); border-radius: 8px; height: 36px; padding: 0 8px; background: var(--bg); font-variant-numeric: tabular-nums; }
+.cfdtable input:focus { outline: 0; border-color: var(--text); }
+.verdict { text-align: center; padding: 26px 16px 18px; }
+.verdict .k { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.verdict h2 { font: 600 clamp(28px, 4.5vw, 40px)/1.1 var(--display); letter-spacing: -0.025em; margin: 8px 0; }
+.verdict p { color: var(--muted); max-width: 600px; margin: 0 auto; }
+.cost { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14.5px; }
+.cost li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--hair); font-variant-numeric: tabular-nums; }
+.cost li.total { border-top: 1px solid var(--text); font-weight: 600; }
+.cost li span:first-child { color: var(--muted); }
+.cost li.total span:first-child { color: var(--text); }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -162,6 +198,7 @@ footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; c
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="advice" aria-selected="true">Advice</button>
     <button role="tab" data-tab="simulate" aria-selected="false">Simulate</button>
+    <button role="tab" data-tab="cfd" aria-selected="false">CFD</button>
     <button role="tab" data-tab="replay" aria-selected="false">AI replay</button>
     <button role="tab" data-tab="about" aria-selected="false">About</button>
   </nav>
@@ -210,7 +247,14 @@ footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; c
   </section>
 
   <section id="adviceOut" class="out"></section>
+  <section id="chartOut" class="out hidden">
+    <h3 class="sec">Chart advice</h3>
+    <p class="secsub">Pick any stock on the watchlist. The desk draws its plan on the chart and tells you when, at what price, and how much. Adjust the stop and target to see the trade re-sized.</p>
+    <div class="chips small" id="symChips"></div>
+    <div id="chartBody"></div>
+  </section>
   <section id="simOut" class="out hidden"></section>
+  <section id="cfdOut" class="hidden"></section>
   <section id="replayOut" class="hidden"></section>
   <section id="aboutOut" class="hidden prose">
     <h3>What runs here</h3>
@@ -219,6 +263,10 @@ footer { border-top: 1px solid var(--hair); margin-top: 70px; padding: 22px 0; c
     <h3>Data</h3>
     <p><b>Latest:</b> daily bars for the watchlist plus SPY, QQQ and VIX, refreshed by this site's GitHub Actions workflow each weekday after the US close using the open-source <a href="https://github.com/ranaroussi/yfinance">yfinance</a> library. Prices are split and dividend adjusted. This is end-of-day data, not a live feed.</p>
     <p><b>2012 to 2017:</b> real daily prices for 20 US stocks from the <a href="https://github.com/yumoxu/stocknet-dataset">stocknet dataset</a>, SPY rebuilt from <a href="https://github.com/quantopian/zipline">zipline</a>'s daily return series, and VIX from <a href="https://github.com/datasets/finance-vix">datasets/finance-vix</a>, all loaded straight from GitHub.</p>
+    <h3>Chart advice</h3>
+    <p>For any stock on the watchlist, the plan is drawn on a candlestick chart with the 20, 50 and 200 day averages. The timing instructions follow the desk's rules: entries are placed before the next session's open, as a limit or a buy stop-limit, and expire if not filled that day. The sliders change only the stop and the target; the shares, loss, gain and expected value update from the same sizing caps the desk uses.</p>
+    <h3>CFD</h3>
+    <p>The CFD page costs out two kinds of arbitrage on quotes you enter: a cross-broker gap and a CFD-versus-stock basis trade. It subtracts spreads, commissions and financing and shows the net per share. It is a calculator, not a feed: no free source publishes live CFD quotes.</p>
     <h3>Simulate</h3>
     <p>The desk runs on a schedule you choose. Each time it can place one bracket order (entry, stop and target), sized by the rules above. Orders fill the next trading day against real bars. Fill rules are conservative: if a day touches both stop and target, the stop counts. Positions still open after 20 sessions are closed at the next open.</p>
     <h3>Not advice</h3>
@@ -317,6 +365,7 @@ const HERO = {
   advice: ["What would the desk do?", "Pick a day and set your money rules. The desk's own scripts run in your browser and show every decision they make."],
   simulate: ["Let it trade for months.", "The desk runs on a schedule, places bracket orders and a paper broker fills them on real prices. See how the rules would have done."],
   replay: ["The AI desk, on 2017.", "The full Claude Code desk with all eleven agents, replayed on real 2017 data. Every brief, report and decision, as it happened."],
+  cfd: ["CFD arbitrage, costed.", "Type in the CFD quotes you see at your broker. The tool compares them with the real stock price and tells you whether any gap beats the full cost of the trade."],
   about: ["How it works.", "The same rules as the Claude Code plugin, running locally in your browser."],
 };
 $$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -324,10 +373,13 @@ function showTab(t) {
   state.tab = t;
   $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
   $("#heroTitle").textContent = HERO[t][0]; $("#heroText").textContent = HERO[t][1];
-  $("#settings").classList.toggle("hidden", t === "replay" || t === "about");
+  $("#settings").classList.toggle("hidden", t === "replay" || t === "about" || t === "cfd");
+  $("#cfdOut").classList.toggle("hidden", t !== "cfd");
+  if (t === "cfd") initCfd();
   $$(".adv").forEach((x) => x.classList.toggle("hidden", t !== "advice"));
   $$(".sim").forEach((x) => x.classList.toggle("hidden", t !== "simulate"));
   $("#adviceOut").classList.toggle("hidden", t !== "advice");
+  $("#chartOut").classList.toggle("hidden", t !== "advice" || !chartState);
   $("#simOut").classList.toggle("hidden", t !== "simulate");
   $("#replayOut").classList.toggle("hidden", t !== "replay");
   $("#aboutOut").classList.toggle("hidden", t !== "about");
@@ -376,6 +428,8 @@ async function runAdvice() {
     for (const c of r.candidates) bars[c.symbol] = await ask("bars", { dataset: state.ds, symbol: c.symbol, asof, n: 90 });
     renderAdvice(r, bars, s);
     setStatus(`Done in ${((performance.now() - t0) / 1000).toFixed(1)} s, using data up to ${r.asof}.`);
+    const first = r.decision.symbol || (r.candidates[0] && r.candidates[0].symbol) || (r.screen[0] && r.screen[0].symbol);
+    if (first) await runAnalyze(first);
   } catch (e) { setStatus("Error: " + e.message); }
   setBusy(false);
 }
@@ -427,6 +481,96 @@ function candidateCard(c, barsJson) {
   return h + `</div>`;
 }
 
+
+/* ---------------- chart advice ---------------- */
+let chartState = null;
+function renderSymChips(active) {
+  const list = [...state.watch[state.ds]];
+  $("#symChips").innerHTML = list.map((s) => `<button class="chip" data-s="${s}" aria-pressed="${s === active}">${s}</button>`).join("");
+  $$("#symChips .chip").forEach((c) => c.addEventListener("click", () => runAnalyze(c.dataset.s)));
+}
+async function runAnalyze(sym) {
+  const s = settings(); const asof = $("#asof").value;
+  $("#chartOut").classList.remove("hidden"); renderSymChips(sym);
+  setBusy(true);
+  try {
+    const a = await ask("analyze", { dataset: state.ds, asof, symbol: sym, settings: s });
+    chartState = a; renderChartAdvice(a);
+    setStatus(`Chart advice for ${sym} as of ${a.asof}.`);
+  } catch (e) { setStatus("Error: " + e.message); }
+  setBusy(false);
+}
+function candles(ch, levels, w = 920, h = 360) {
+  const L = 56, R = 16, T = 14, B = 28, bars = ch.bars, n = bars.length;
+  const vals = bars.flatMap((b) => [b[2], b[3]]).concat(levels.map((l) => l.v));
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const x = (i) => L + (w - L - R) * (i + 0.5) / n, y = (v) => T + (h - T - B) * (hi - v) / (hi - lo);
+  const cw = Math.max(2, (w - L - R) / n * 0.62);
+  let g = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img">`;
+  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; g += `<line class="gl" x1="${L}" x2="${w - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, 2)}</text>`; }
+  const step = Math.max(1, Math.floor(n / 6));
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  for (let i = 0; i < n; i += step) { const d = bars[i][0]; g += `<text class="ax" x="${x(i)}" y="${h - 8}" text-anchor="middle">${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]} ${d.slice(2, 4)}</text>`; }
+  const line = (arr, o, dash) => { const d = arr.map((v, i) => v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(" "); return d ? `<polyline points="${d}" fill="none" stroke="currentColor" stroke-opacity="${o}" stroke-width="1.4" ${dash ? `stroke-dasharray="${dash}"` : ""}/>` : ""; };
+  g += line(ch.sma20, .35) + line(ch.sma50, .55) + line(ch.sma200, .25, "2 3");
+  bars.forEach((b, i) => {
+    const up = b[4] >= b[1]; const top = y(Math.max(b[1], b[4])), bot = y(Math.min(b[1], b[4]));
+    g += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(b[2])}" y2="${y(b[3])}" stroke="currentColor" stroke-width="1"/>`;
+    g += `<rect x="${x(i) - cw / 2}" y="${top}" width="${cw}" height="${Math.max(1, bot - top)}" fill="${up ? "var(--bg)" : "currentColor"}" stroke="currentColor" stroke-width="1"/>`;
+  });
+  const lv = [...levels].sort((a, b) => b.v - a.v); let lastY = -99;
+  for (const l of lv) { let ty = y(l.v) - 6; if (ty - lastY < 14) ty = lastY + 14; lastY = ty;
+    g += `<line x1="${L}" x2="${w - R}" y1="${y(l.v)}" y2="${y(l.v)}" stroke="currentColor" stroke-opacity="${l.o ?? .7}" stroke-dasharray="${l.dash || "6 4"}" stroke-width="1.3"/><text class="lv" x="${w - R - 4}" y="${ty}" text-anchor="end">${esc(l.t)}</text>`; }
+  return g + "</svg>";
+}
+function sizeFor(entry, stop, a) {
+  const pr = a.profile, z = a.candidate.sizing || {};
+  const rps = entry - stop; if (rps <= 0) return { qty: 0, by: "stop above entry" };
+  const caps = { "max risk per trade": Math.floor(pr.budget * pr.max_risk_per_trade_pct / 100 / rps),
+                 "max in one stock": Math.floor(pr.max_position_value / entry),
+                 "cash reserve": Math.floor((pr.budget - pr.cash_reserve) / entry),
+                 "Kelly": Math.floor((z.kelly_used || 0) * pr.budget / rps) };
+  let by = "Kelly", qty = caps.Kelly;
+  for (const k in caps) if (caps[k] < qty) { qty = caps[k]; by = k; }
+  return { qty: Math.max(0, qty), by, caps };
+}
+function renderChartAdvice(a) {
+  const c = a.candidate, p = c.plan, b = c.backtest || {}, sc = a.screen;
+  if (!p) { $("#chartBody").innerHTML = `<div class="advice"><h4>${esc(a.symbol)}</h4><p class="sub">No plan could be built for this day.</p></div>`; return; }
+  const stopLo = +(p.entry - 4 * p.atr14).toFixed(2), stopHi = +(p.entry - 0.5 * p.atr14).toFixed(2);
+  const tgtLo = +(p.entry + 0.5 * p.atr14).toFixed(2), tgtHi = +(p.entry + 6 * p.atr14).toFixed(2);
+  const stepv = 0.01;
+  const screenNote = sc.passed ? "This stock passed the screen today." : `The screener filtered this stock out today (${sc.failed.concat(sc.unknown).join(", ").replaceAll("_", " ")}), so the desk would not trade it. The plan below is for study.`;
+  $("#chartBody").innerHTML = `<div class="advice"><h4>${esc(a.symbol)} <span style="color:var(--muted);font-weight:400">${esc(p.setup.replace("_", " "))} · ${a.asof}</span></h4>
+    <p class="sub">${esc(p.why)}. ${esc(screenNote)}</p>
+    <div id="cv"></div>
+    <div class="legend"><span><i style="opacity:.35"></i>20 day</span><span><i style="opacity:.55"></i>50 day</span><span><i class="d"></i>200 day</span><span>&#9633; up day &nbsp; &#9632; down day</span></div>
+    <div class="plan"><div><ol class="steps" id="steps"></ol></div>
+      <div><div class="sliders"><label>Stop loss <b id="stopV"></b></label><input type="range" id="stopS" min="${stopLo}" max="${stopHi}" step="${stepv}" value="${p.stop}">
+        <label>Target <b id="tgtV"></b></label><input type="range" id="tgtS" min="${tgtLo}" max="${tgtHi}" step="${stepv}" value="${p.target}">
+        <div class="rewards" id="rew"></div><div class="warn" id="warn"></div></div></div></div></div>`;
+  const update = () => {
+    const stop = +$("#stopS").value, tgt = +$("#tgtS").value, entry = p.entry, worst = p.entry_limit || p.entry;
+    $("#stopV").textContent = fmt(stop) + ` (${fmt((entry / stop - 1) * 100, 1)}% below, ${fmt((entry - stop) / p.atr14, 1)} ATR)`;
+    $("#tgtV").textContent = fmt(tgt) + ` (+${fmt((tgt / entry - 1) * 100, 1)}%)`;
+    const rr = (tgt - entry) / (entry - stop); const sz = sizeFor(worst, stop, a);
+    const risk = sz.qty * (worst - stop), gain = sz.qty * (tgt - worst), ev = b.expectancy_r != null ? b.expectancy_r * risk : null;
+    $("#cv").innerHTML = candles(a.chart, [{ v: entry, t: `${p.entry_type === "stop_limit" ? "buy above" : "buy at"} ${fmt(entry)}`, o: .9 }, { v: stop, t: `stop ${fmt(stop)}`, dash: "2 4" }, { v: tgt, t: `target ${fmt(tgt)}`, dash: "8 4" }]);
+    $("#rew").innerHTML = `<div><span>Reward to risk</span><b>${fmt(rr, 2)}</b></div><div><span>Shares</span><b>${sz.qty}</b></div><div><span>Cost</span><b>${usd(sz.qty * worst, 0)}</b></div><div><span>Loss at stop</span><b>${usd(-risk, 0)}</b></div><div><span>Gain at target</span><b>${usd(gain, 0)}</b></div><div><span>Expected per trade</span><b>${ev == null ? "n/a" : usd(ev, 0)}</b></div>`;
+    const w = [];
+    if (rr < a.profile.min_reward_risk) w.push(`Reward to risk ${fmt(rr, 2)} is below the desk minimum of ${a.profile.min_reward_risk}, so the risk check would reject this.`);
+    if ((entry - stop) / p.atr14 < 1.5) w.push("The stop is inside 1.5 ATR; normal daily noise could hit it.");
+    w.push(`Size is limited by ${sz.by}.`);
+    if (ev != null) w.push(`Expected value uses the backtest's ${fmt(b.expectancy_r, 2)} R per trade over ${b.trades} trades (${b.verdict}).`);
+    $("#warn").textContent = w.join(" ");
+    const when = p.entry_type === "stop_limit"
+      ? `Before the open on ${a.next_session || "the next session"}, place a buy stop-limit: trigger ${fmt(entry)}, limit ${fmt(worst)}. It fills only if price rises through ${fmt(entry)} that day. If it does not, there is no trade.`
+      : `Before the open on ${a.next_session || "the next session"}, place a limit buy at ${fmt(entry)}, good for that session only. If it does not fill, let it expire; do not chase.`;
+    $("#steps").innerHTML = [["When", when], ["Stop loss", `${fmt(stop)}, sent with the entry as a bracket order. Exit without question if hit.`], ["Target", `${fmt(tgt)}, a limit sell attached to the same bracket.`], ["Time stop", `Close at the next open if still held after ${p.max_hold} sessions. Past trades on this rule lasted ${b.avg_bars_held ? fmt(b.avg_bars_held, 0) : "n/a"} sessions on average.`], ["Gates", `Backtest ${b.verdict || "n/a"} (${b.trades || 0} trades, ${b.win_rate != null ? fmt(b.win_rate * 100, 0) + "% wins" : "n/a"}). Market ${a.regime.regime.replace("_", " ")}. ${sc.passed ? "Screen passed." : "Screen failed."} Desk verdict: ${c.verdict}.`]].map(([k, v]) => `<li><span>${k}</span><b>${esc(nodash(v))}</b></li>`).join("");
+  };
+  $("#stopS").addEventListener("input", update); $("#tgtS").addEventListener("input", update); update();
+}
+
 /* ---------------- simulate ---------------- */
 async function runSim() {
   const s = settings(); const start = $("#simStart").value, end = $("#simEnd").value;
@@ -464,6 +608,114 @@ function renderSim(r) {
   }
   h += `</ul>`;
   $("#simOut").innerHTML = h;
+}
+
+
+/* ---------------- CFD arbitrage ---------------- */
+let cfdReady = false;
+const CFD_DEMO = [
+  { name: "Broker A", bid: 187.14, ask: 187.28, comm: 0.02, finL: 7.5, finS: 1.0, margin: 20 },
+  { name: "Broker B (stale)", bid: 187.74, ask: 187.90, comm: 0.00, finL: 8.0, finS: -3.0, margin: 20 },
+  { name: "Broker C", bid: 187.17, ask: 187.25, comm: 0.00, finL: 9.0, finS: 2.0, margin: 20 },
+];
+function initCfd() {
+  if (cfdReady) return; cfdReady = true;
+  const el = $("#cfdOut");
+  el.innerHTML = `<div class="sheet"><div class="grid">
+    <div class="field"><span class="lbl">Underlying stock</span><div class="chips small" id="cfdSyms"></div></div>
+    <div class="field"><span class="lbl">Stock reference price <span class="val" id="refNote"></span></span><div class="money"><span>$</span><input id="refPx" inputmode="decimal" value="187.21"></div><div class="hint">Last close from our data, or type the live price you see.</div></div>
+    <div class="field"><label>Holding period <span class="val" id="daysV">5 days</span></label><input id="days" type="range" min="0" max="60" step="1" value="5"><div class="hint">0 means closed the same day, so no overnight financing.</div></div>
+    <div class="field"><span class="lbl">Capital for this trade</span><div class="money"><span>$</span><input id="cfdCap" inputmode="numeric" value="2,500"></div><div class="hint">The desk's max in one stock. Margin lets you control more; the risk is still on the full amount.</div></div>
+  </div>
+  <div style="margin-top:22px"><span class="lbl">CFD quotes from your brokers</span>
+  <div class="tw"><table class="cfdtable"><thead><tr><th>Broker</th><th>Bid</th><th>Ask</th><th>Commission % per side</th><th>Financing long % p.a.</th><th>Financing short % p.a.</th><th>Margin %</th></tr></thead><tbody id="brokers"></tbody></table></div>
+  <div class="hint">Short financing is often what you pay to hold a short; enter a negative number if your broker pays you. Commission 0 for spread-only brokers.</div>
+  <div class="actions"><button class="go" id="cfdRun">Check for arbitrage</button><button class="ghost" id="cfdDemo">Load example quotes</button><button class="ghost" id="cfdClear">Clear</button></div></div>
+  <div id="cfdRes"></div>
+  <div class="prose" style="margin-top:40px"><h3>Read this first</h3>
+  <p><b>What this checks.</b> Two kinds of CFD arbitrage: buying at one broker's ask and shorting at another broker's higher bid (a cross-broker gap), and holding the real stock while shorting a CFD quoted above it (a basis trade). Both only pay if the gap is wider than every cost: both spreads, commissions on each side, and financing for every night held.</p>
+  <p><b>What it cannot do.</b> There is no free source of live CFD quotes, so this page works on the numbers you type. Quotes must be captured at the same instant to mean anything; a gap that lasts seconds is not a trade you can place by hand. Brokers can requote, and most ban latency arbitrage in their terms. Gaps between CFD and stock usually close by the CFD moving, not the stock, and a short CFD pays the stock's dividends.</p>
+  <p><b>Where CFDs exist.</b> CFDs are not available to US residents and are restricted elsewhere. Nothing here is financial advice.</p></div>`;
+  const list = state.ds === "live" ? WATCH.live : WATCH.hist2017;
+  $("#cfdSyms").innerHTML = list.map((s) => `<button class="chip" data-s="${s}" aria-pressed="${s === "AAPL"}">${s}</button>`).join("");
+  $$("#cfdSyms .chip").forEach((c) => c.addEventListener("click", async () => {
+    $$("#cfdSyms .chip").forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
+    try { const inf = state.info[state.ds] || await ask("info", { dataset: state.ds }); state.info[state.ds] = inf;
+      const bars = JSON.parse(await ask("bars", { dataset: state.ds, symbol: c.dataset.s, asof: inf.last, n: 1 }));
+      $("#refPx").value = fmt(bars[0][4]); $("#refNote").textContent = `close ${bars[0][0]}`; runCfd(); } catch (e) { setStatus("Error: " + e.message); }
+  }));
+  const row = (i, b = {}) => `<tr><td><input data-k="name" data-i="${i}" value="${esc(b.name ?? "Broker " + "ABC"[i])}"></td>${["bid", "ask", "comm", "finL", "finS", "margin"].map((k) => `<td><input data-k="${k}" data-i="${i}" inputmode="decimal" value="${b[k] ?? (k === "margin" ? 20 : "")}"></td>`).join("")}</tr>`;
+  const fill = (rows) => { $("#brokers").innerHTML = rows.map((b, i) => row(i, b)).join(""); $$("#brokers input").forEach((x) => x.addEventListener("input", runCfd)); };
+  fill([{}, {}, {}]);
+  $("#cfdDemo").addEventListener("click", () => { fill(CFD_DEMO); $("#refPx").value = "187.21"; $("#refNote").textContent = "example, one quote 0.3% stale"; runCfd(); });
+  $("#cfdClear").addEventListener("click", () => { fill([{}, {}, {}]); $("#cfdRes").innerHTML = ""; });
+  $("#cfdRun").addEventListener("click", runCfd);
+  $("#days").addEventListener("input", () => { $("#daysV").textContent = $("#days").value + " days"; runCfd(); });
+  ["#refPx", "#cfdCap"].forEach((id) => $(id).addEventListener("input", runCfd));
+}
+function brokers() {
+  const out = [];
+  for (let i = 0; i < 3; i++) {
+    const g = (k) => $(`#brokers input[data-k="${k}"][data-i="${i}"]`);
+    const b = { name: g("name").value.trim() || `Broker ${"ABC"[i]}` };
+    for (const k of ["bid", "ask", "comm", "finL", "finS", "margin"]) b[k] = Number(String(g(k).value).replace(/[^0-9.\-]/g, ""));
+    if (b.bid > 0 && b.ask > 0) out.push(b);
+  }
+  return out;
+}
+function runCfd() {
+  const bs = brokers(); const ref = num($("#refPx")); const days = +$("#days").value; const cap = num($("#cfdCap"));
+  const res = $("#cfdRes");
+  if (!bs.length) { res.innerHTML = `<p class="empty">Enter a bid and ask for at least one broker.</p>`; return; }
+  const fin = (rate, px) => px * (rate / 100) * (days / 365);
+  // cross-broker: buy at lowest ask, short at highest bid, unwind assuming the gap closes
+  const cands = [];
+  for (const a of bs) for (const b of bs) if (a !== b) {
+    const gross = b.bid - a.ask;
+    const spreadClose = (a.ask - a.bid) / 2 + (b.ask - b.bid) / 2; // crossing half a spread each side when you unwind
+    const comm = (a.ask * a.comm + b.bid * b.comm) / 100 * 2;
+    const f = fin(a.finL, a.ask) + fin(b.finS, b.bid);
+    cands.push({ kind: "cross", buy: a, sell: b, gross, costs: { spreadClose, comm, fin: f }, net: gross - spreadClose - comm - f });
+  }
+  // basis: long stock at ref, short CFD at broker bid
+  for (const b of bs) {
+    const gross = b.bid - ref;
+    const spreadClose = (b.ask - b.bid) / 2;
+    const comm = b.bid * b.comm / 100 * 2;
+    const f = fin(b.finS, b.bid);
+    cands.push({ kind: "basis", sell: b, gross, costs: { spreadClose, comm, fin: f }, net: gross - spreadClose - comm - f });
+  }
+  cands.sort((x, y) => y.net - x.net);
+  const best = cands[0];
+  const px = best.kind === "cross" ? best.buy.ask : ref;
+  const qty = Math.floor(cap / px);
+  const margin = best.kind === "cross" ? (best.buy.ask * best.buy.margin + best.sell.bid * best.sell.margin) / 100 : ref + best.sell.bid * best.sell.margin / 100;
+  const ok = best.net > 0;
+  const title = ok ? `Possible: ${usd(best.net * qty)} on ${qty} shares` : "No arbitrage";
+  const desc = best.kind === "cross"
+    ? `Buy the CFD at ${esc(best.buy.name)} for ${fmt(best.buy.ask)} and short it at ${esc(best.sell.name)} for ${fmt(best.sell.bid)}. Gross gap ${fmt(best.gross)} per share.`
+    : `Buy the stock at ${fmt(ref)} and short the CFD at ${esc(best.sell.name)} for ${fmt(best.sell.bid)}. Gross gap ${fmt(best.gross)} per share.`;
+  const tot = best.costs.spreadClose + best.costs.comm + best.costs.fin;
+  const be = best.gross - best.costs.spreadClose - best.costs.comm;
+  const finPerDay = tot - best.costs.spreadClose - best.costs.comm > 0 && days > 0 ? (best.costs.fin / days) : 0;
+  const beDays = finPerDay > 0 ? Math.floor(be / finPerDay) : null;
+  let h = `<div class="verdict"><div class="k">best of ${cands.length} combinations · ${days} day${days === 1 ? "" : "s"}</div><h2>${title}</h2><p>${desc} ${ok ? "After all costs the edge is " + fmt(best.net) + " per share, " + fmt(best.net / px * 100, 2) + "% of the price." : (best.gross <= 0 ? "No broker quotes above the price you can buy at, so there is no gap to capture." : "Costs of " + fmt(tot) + " per share are larger than the gap, leaving " + fmt(best.net) + " per share.")}</p></div>`;
+  h += `<div class="cfdgrid"><div class="card"><h4>Cost of the best trade, per share</h4><ul class="cost">
+    <li><span>Gross gap</span><span>${fmt(best.gross, 3)}</span></li>
+    <li><span>Half spreads crossed to unwind</span><span>${fmt(-best.costs.spreadClose, 3)}</span></li>
+    <li><span>Commissions, open and close</span><span>${fmt(-best.costs.comm, 3)}</span></li>
+    <li><span>Financing, ${days} night${days === 1 ? "" : "s"}${best.costs.fin < 0 ? " (credit)" : ""}</span><span>${fmt(-best.costs.fin, 3)}</span></li>
+    <li class="total"><span>Net</span><span>${fmt(best.net, 3)}</span></li></ul>
+    <div class="rewards"><div><span>Shares</span><b>${qty}</b></div><div><span>Margin needed</span><b>${usd(margin * qty, 0)}</b></div><div><span>Net on trade</span><b>${usd(best.net * qty)}</b></div><div><span>Break-even hold</span><b>${beDays == null ? (be > 0 ? "any" : "never") : beDays + " d"}</b></div></div>
+    <div class="warn">The gross gap is assumed to close fully. If it only half closes, net is ${fmt(best.gross / 2 - tot, 3)} per share.</div></div>
+    <div class="card"><h4>All combinations</h4><div class="tw"><table><thead><tr><th>Trade</th><th>Gross</th><th>Costs</th><th>Net / share</th></tr></thead><tbody>`;
+  for (const c of cands) {
+    const t = c.kind === "cross" ? `Buy ${esc(c.buy.name)} ${fmt(c.buy.ask)}, short ${esc(c.sell.name)} ${fmt(c.sell.bid)}` : `Stock ${fmt(ref)}, short ${esc(c.sell.name)} ${fmt(c.sell.bid)}`;
+    const tc = c.costs.spreadClose + c.costs.comm + c.costs.fin;
+    h += `<tr class="${c.net > 0 ? "" : "dim"}"><td>${t}</td><td>${fmt(c.gross, 3)}</td><td>${fmt(tc, 3)}</td><td>${fmt(c.net, 3)}</td></tr>`;
+  }
+  h += `</tbody></table></div></div></div>`;
+  res.innerHTML = h;
 }
 
 /* ---------------- replay (recorded AI run) ---------------- */

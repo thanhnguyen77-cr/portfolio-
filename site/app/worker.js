@@ -104,6 +104,10 @@ self.onmessage = async (e) => {
       post("status", { text: "Running the desk" });
       result = await call(`import json; a = json.loads(ARGS)
 D.to_json(D.run_session(a["dataset"], a["asof"], a["settings"]))`);
+    } else if (cmd === "analyze") {
+      post("status", { text: `Analysing ${args.symbol}` });
+      result = await call(`import json; a = json.loads(ARGS)
+D.to_json(D.analyze_symbol(a["dataset"], a["asof"], a["symbol"], a["settings"], a.get("setup")))`);
     } else if (cmd === "bars") {
       result = await call(`import json; a = json.loads(ARGS); D.bars_json(a["dataset"], a["symbol"], a["asof"], a.get("n", 120))`);
     } else if (cmd === "simulate") {

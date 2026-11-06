@@ -165,68 +165,12 @@ def run_session(ds: str, asof: str, settings: dict, account: Optional[dict] = No
 
     peers = [x["symbol"] for x in res if "liquidity" not in x["failed"]][:12]
     for cand in passed[:max_candidates]:
-        sym = cand["symbol"]
-        bs = bars_upto(ds, sym, asof)
-        plan = make_plan(sym, bs, cand["setup"], prof["min_reward_risk"])
-        c: dict[str, Any] = {"symbol": sym, "score": cand["score"], "plan": plan}
+        c = evaluate_candidate(ds, asof, cand["symbol"], cand["setup"], prof, reg, peers, account, sensitivity)
+        c["score"] = cand["score"]
         out["candidates"].append(c)
-        if not plan:
-            c["verdict"] = "no plan"
-            continue
-        # backtest the plan's rule on the candidate plus liquid peers
-        p = bt.Params(capital=prof["budget"], position_value=prof["max_position_value"])
-        p, _ = bt.params_from_plan(plan, p)
-        fees = prof["fees"]
-        p.fee_bps, p.slippage_bps = fees["fee_bps"], fees["slippage_bps"]
-        series = [(sym, bs)] + [(s, bars_upto(ds, s, asof)) for s in peers if s != sym]
-        series = [(s, b) for s, b in series if len(b) >= 260]
-        frames = {s: tl.indicator_frame(b) for s, b in series}
-        sims = bt.run_all(series, p, frames)
-        trades = [x for s in sims for x in s["trades"]]
-        is_tr, oos_tr = [], []
-        for s in sims:
-            a, b, _ = bt.split_oos(s, 0.3)
-            is_tr += a
-            oos_tr += b
-        all_st, oos_st = bt.trade_stats(trades), bt.trade_stats(oos_tr)
-        sens = bt.sensitivity(series, p, frames) if sensitivity else None
-        verdict, notes = bt.verdict(all_st, oos_st, sens, bt.equity_stats(sims[0], p.capital),
-                                    int(prof["backtest_min_trades"]))
-        c["backtest"] = tl.clean_floats({"verdict": verdict, "notes": notes, "trades": all_st["trades"],
-                                         "win_rate": all_st["win_rate"], "payoff": all_st["payoff"],
-                                         "expectancy_r": all_st["expectancy_r"],
-                                         "profit_factor": all_st["profit_factor"],
-                                         "oos_trades": oos_st["trades"], "oos_expectancy_r": oos_st["expectancy_r"],
-                                         "sensitivity": f"{sens['positive_cells']}/{sens['cells']}" if sens else None,
-                                         "symbols": [s for s, _ in series]}, 4)
-        if verdict != "PASS":
-            c["verdict"] = f"backtest {verdict}"
-            continue
-        worst = plan["entry_limit"] or plan["entry"]
-        sz = kl.size(p_hat=all_st["win_rate"], payoff=all_st["payoff"], n_trades=all_st["trades"],
-                     entry=worst, stop=plan["stop"], prof=prof, account=account, regime=reg["regime"],
-                     target=plan["target"])
-        c["sizing"] = tl.clean_floats(sz, 4)
-        if sz["decision"] != "SIZE":
-            c["verdict"] = "sizing: no trade"
-            continue
-        order = {"symbol": sym, "side": "buy", "qty": sz["qty"], "order_type": plan["entry_type"],
-                 "limit_price": plan["entry_limit"] or plan["entry"],
-                 "stop_price": plan["entry"] if plan["entry_type"] == "stop_limit" else None,
-                 "stop_loss": plan["stop"], "take_profit": plan["target"]}
-        acct = account or {"equity": prof["budget"], "last_equity": prof["budget"], "cash": prof["budget"],
-                           "positions": [], "open_orders": []}
-        ck = rc.check_entry(order, prof, acct, {"verdict": verdict, "symbols": [s for s, _ in series],
-                                                "all": {"trades": all_st["trades"]}, "params": {"max_hold": 20}},
-                            sz, None, reg["regime"])
-        c["risk"] = {"decision": "APPROVE" if not ck.failed else "REJECT", "checks": ck.items}
-        c["order"] = order
-        if ck.failed:
-            c["verdict"] = "risk check rejected"
-            continue
-        c["verdict"] = "approved"
-        decision = {"action": "buy", "order": order, "symbol": sym}
-        break
+        if c.get("verdict") == "approved":
+            decision = {"action": "buy", "order": c["order"], "symbol": c["symbol"]}
+            break
 
     for c in out["candidates"]:
         out["steps"].append({"agent": f"Analyst, backtest, sizing: {c['symbol']}", "status": c.get("verdict"),
@@ -247,6 +191,93 @@ def _cand_line(c: dict) -> str:
     if c.get("sizing"):
         s += f"; size {c['sizing'].get('qty')} shares ({c['sizing'].get('binding_constraint')})"
     return s
+
+
+def evaluate_candidate(ds: str, asof: str, sym: str, setup: str, prof: dict, reg: dict, peers: list[str],
+                       account: Optional[dict], sensitivity: bool) -> dict:
+    """Plan, backtest, size and risk-check one symbol. Returns the candidate record."""
+    bs = bars_upto(ds, sym, asof)
+    plan = make_plan(sym, bs, setup, prof["min_reward_risk"])
+    c: dict[str, Any] = {"symbol": sym, "plan": plan}
+    if not plan:
+        c["verdict"] = "no plan"
+        return c
+    p = bt.Params(capital=prof["budget"], position_value=prof["max_position_value"])
+    p, _ = bt.params_from_plan(plan, p)
+    fees = prof["fees"]
+    p.fee_bps, p.slippage_bps = fees["fee_bps"], fees["slippage_bps"]
+    series = [(sym, bs)] + [(s, bars_upto(ds, s, asof)) for s in peers if s != sym]
+    series = [(s, b) for s, b in series if len(b) >= 260]
+    frames = {s: tl.indicator_frame(b) for s, b in series}
+    sims = bt.run_all(series, p, frames)
+    trades = [x for s in sims for x in s["trades"]]
+    is_tr, oos_tr = [], []
+    for s in sims:
+        a, b, _ = bt.split_oos(s, 0.3)
+        is_tr += a
+        oos_tr += b
+    all_st, oos_st = bt.trade_stats(trades), bt.trade_stats(oos_tr)
+    sens = bt.sensitivity(series, p, frames) if sensitivity else None
+    verdict, notes = bt.verdict(all_st, oos_st, sens, bt.equity_stats(sims[0], p.capital),
+                                int(prof["backtest_min_trades"]))
+    c["backtest"] = tl.clean_floats({"verdict": verdict, "notes": notes, "trades": all_st["trades"],
+                                     "win_rate": all_st["win_rate"], "payoff": all_st["payoff"],
+                                     "expectancy_r": all_st["expectancy_r"],
+                                     "profit_factor": all_st["profit_factor"],
+                                     "avg_bars_held": all_st["avg_bars_held"],
+                                     "oos_trades": oos_st["trades"], "oos_expectancy_r": oos_st["expectancy_r"],
+                                     "sensitivity": f"{sens['positive_cells']}/{sens['cells']}" if sens else None,
+                                     "symbols": [s for s, _ in series]}, 4)
+    worst = plan["entry_limit"] or plan["entry"]
+    # size even when the backtest fails, so the chart tools can show what the rules would allow
+    sz = kl.size(p_hat=all_st["win_rate"] or 0.0, payoff=all_st["payoff"] or 1.0, n_trades=all_st["trades"],
+                 entry=worst, stop=plan["stop"], prof=prof, account=account, regime=reg["regime"],
+                 target=plan["target"])
+    c["sizing"] = tl.clean_floats(sz, 4)
+    if verdict != "PASS":
+        c["verdict"] = f"backtest {verdict}"
+        return c
+    if sz["decision"] != "SIZE":
+        c["verdict"] = "sizing: no trade"
+        return c
+    order = {"symbol": sym, "side": "buy", "qty": sz["qty"], "order_type": plan["entry_type"],
+             "limit_price": plan["entry_limit"] or plan["entry"],
+             "stop_price": plan["entry"] if plan["entry_type"] == "stop_limit" else None,
+             "stop_loss": plan["stop"], "take_profit": plan["target"]}
+    acct = account or {"equity": prof["budget"], "last_equity": prof["budget"], "cash": prof["budget"],
+                       "positions": [], "open_orders": []}
+    ck = rc.check_entry(order, prof, acct, {"verdict": verdict, "symbols": [s for s, _ in series],
+                                            "all": {"trades": all_st["trades"]}, "params": {"max_hold": 20}},
+                        sz, None, reg["regime"])
+    c["risk"] = {"decision": "APPROVE" if not ck.failed else "REJECT", "checks": ck.items}
+    c["order"] = order
+    c["verdict"] = "approved" if not ck.failed else "risk check rejected"
+    return c
+
+
+def analyze_symbol(ds: str, asof: str, sym: str, settings: dict, setup: Optional[str] = None) -> dict:
+    """Chart advice for one symbol on one day, whether or not it passes the screen."""
+    prof = _profile(settings)
+    reg = _regime(ds, asof)
+    bs = bars_upto(ds, sym, asof)
+    if len(bs) < 210:
+        raise ValueError(f"not enough history for {sym} on {asof}")
+    snap = sc.snapshot_from_bars(sym, bs)
+    screen = sc.evaluate(snap, prof)
+    universe = [s for s in settings.get("watchlist") or info(ds)["symbols"]]
+    peers = [s for s in universe if s != sym and len(bars_upto(ds, s, asof)) >= 260][:11]
+    c = evaluate_candidate(ds, asof, sym, setup or screen["setup"], prof, reg, peers, None, True)
+    f = tl.indicator_frame(bs)
+    n = 130
+    cal = calendar(ds)
+    nxt = next((d for d in cal if d > asof), None)
+    chart = {"bars": [[b["time"][:10], b["open"], b["high"], b["low"], b["close"], b["volume"]] for b in bs[-n:]],
+             "sma20": f["sma20"][-n:], "sma50": f["sma50"][-n:], "sma200": f["sma200"][-n:],
+             "high20": f["high20"][-n:], "low20": f["low20"][-n:]}
+    return tl.clean_floats({"symbol": sym, "asof": asof, "next_session": nxt, "regime": reg, "screen": screen,
+                            "candidate": c, "chart": chart, "profile": {k: prof[k] for k in
+                            ("budget", "cash_reserve", "max_position_value", "max_risk_per_trade_pct",
+                             "kelly_fraction", "min_reward_risk")}}, 4)
 
 
 # ------------------------------------------------------------------ walk forward
