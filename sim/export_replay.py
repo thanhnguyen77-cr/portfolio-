@@ -111,7 +111,7 @@ def main() -> None:
         "orders": len([o for o in st.get("orders", []) if not o.get("parent_id")]),
         "fills": st.get("fills", []),
         "end_equity": eq, "asof": st.get("asof"),
-        "cost_usd": round(sum(s.get("cost_usd") or 0 for s in sessions), 2),
+        "cost_usd": round(sum({s.get("session_id"): s.get("cost_usd") or 0 for s in sessions}.values()), 2),
     }
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(data, indent=1))

@@ -213,7 +213,11 @@ def build(run: Path) -> Path:
         peak = max(peak, h["equity"])
         mdd = max(mdd, (peak - h["equity"]) / peak if peak else 0)
     spy_ret = (spy[dates[-1]] / spy0 - 1) * 100 if dates and spy0 else None
-    cost = sum(s.get("cost_usd") or 0 for s in sessions)
+    # a resumed session reports its running total, so take the last figure per session
+    per_session: dict = {}
+    for s in sessions:
+        per_session[s.get("session_id")] = s.get("cost_usd") or 0
+    cost = sum(per_session.values())
     secs = sum(s.get("seconds") or 0 for s in sessions)
 
     # orders / trades from broker truth
