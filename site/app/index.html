@@ -558,7 +558,7 @@ function renderChartAdvice(a) {
     $("#cv").innerHTML = candles(a.chart, [{ v: entry, t: `${p.entry_type === "stop_limit" ? "buy above" : "buy at"} ${fmt(entry)}`, o: .9 }, { v: stop, t: `stop ${fmt(stop)}`, dash: "2 4" }, { v: tgt, t: `target ${fmt(tgt)}`, dash: "8 4" }]);
     $("#rew").innerHTML = `<div><span>Reward to risk</span><b>${fmt(rr, 2)}</b></div><div><span>Shares</span><b>${sz.qty}</b></div><div><span>Cost</span><b>${usd(sz.qty * worst, 0)}</b></div><div><span>Loss at stop</span><b>${usd(-risk, 0)}</b></div><div><span>Gain at target</span><b>${usd(gain, 0)}</b></div><div><span>Expected per trade</span><b>${ev == null ? "n/a" : usd(ev, 0)}</b></div>`;
     const w = [];
-    if (rr < a.profile.min_reward_risk) w.push(`Reward to risk ${fmt(rr, 2)} is below the desk minimum of ${a.profile.min_reward_risk}, so the risk check would reject this.`);
+    if (rr < a.profile.min_reward_risk - 1e-6) w.push(`Reward to risk ${fmt(rr, 2)} is below the desk minimum of ${a.profile.min_reward_risk}, so the risk check would reject this.`);
     if ((entry - stop) / p.atr14 < 1.5) w.push("The stop is inside 1.5 ATR; normal daily noise could hit it.");
     w.push(`Size is limited by ${sz.by}.`);
     if (ev != null) w.push(`Expected value uses the backtest's ${fmt(b.expectancy_r, 2)} R per trade over ${b.trades} trades (${b.verdict}).`);
