@@ -1,0 +1,21 @@
+{
+  "symbol": "NVDA",
+  "setup": "breakout",
+  "as_of": "2026-11-06",
+  "entry_type": "stop_limit",
+  "entry": 152.3,
+  "entry_limit": 152.9,
+  "stop": 146.1,
+  "target": 164.7,
+  "atr14": 3.05,
+  "stop_atr": 2.03,
+  "rr": 2.0,
+  "max_hold": 20,
+  "lookback": 20,
+  "invalidation": [
+    "daily close below 147.50 before entry",
+    "gap open above 155.40"
+  ],
+  "valid_until": "2026-11-13",
+  "_note": "Illustrative example of the plan format only - not a recommendation and not real market data."
+}

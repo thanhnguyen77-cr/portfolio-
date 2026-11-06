@@ -1,0 +1,7 @@
+# build output (python3 tools/build_skill_zip.py)
+dist/
+# local trading data, account snapshots and approval tickets
+trader-workspace/
+__pycache__/
+*.pyc
+.DS_Store

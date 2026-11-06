@@ -1,0 +1,11 @@
+{
+  "name": "trader",
+  "version": "1.0.0",
+  "description": "An 11-agent trading desk for US stocks on TradingView + Alpaca: market regime, screener, analyst, backtester with real fees, Kelly position sizer, news desk, TradingView alerts, risk manager with veto, paper-trading broker and journal — with a hook that blocks any order the risk manager did not approve.",
+  "author": {
+    "name": "thanhnguyen77-cr"
+  },
+  "repository": "https://github.com/thanhnguyen77-cr/portfolio-",
+  "license": "MIT",
+  "keywords": ["trading", "tradingview", "alpaca", "backtesting", "kelly", "risk-management", "paper-trading", "agents"]
+}

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*alpaca.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/trader/scripts/order_guard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

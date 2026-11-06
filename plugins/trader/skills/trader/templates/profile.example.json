@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "currency": "USD",
+  "budget": 10000,
+  "cash_reserve": 2000,
+  "max_position_value": 1500,
+  "max_risk_per_trade_pct": 1.0,
+  "kelly_fraction": 0.25,
+  "max_open_positions": 5,
+  "max_total_exposure_pct": 80.0,
+  "max_daily_loss_pct": 3.0,
+  "min_reward_risk": 2.0,
+  "min_price": 5.0,
+  "min_avg_dollar_volume": 20000000,
+  "allow_shorts": false,
+  "allow_market_orders": false,
+  "require_backtest": true,
+  "backtest_min_trades": 30,
+  "approval_ttl_minutes": 30,
+  "require_human_confirmation": true,
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "blocklist": [],
+  "screen": {
+    "rsi_min": 45.0,
+    "rsi_max": 70.0,
+    "require_close_above_sma50": true,
+    "require_sma50_above_sma200": true,
+    "min_relative_volume": 0.8,
+    "max_atr_pct": 8.0,
+    "top_n": 5
+  },
+  "guard": {
+    "require_bracket": true,
+    "max_limit_slippage_pct": 0.5
+  },
+  "fees": {
+    "commission_per_order": 0.0,
+    "commission_per_share": 0.0,
+    "fee_bps": 0.5,
+    "slippage_bps": 5.0
+  }
+}

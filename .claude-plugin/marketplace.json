@@ -1,0 +1,18 @@
+{
+  "name": "portfolio-trader",
+  "owner": {
+    "name": "thanhnguyen77-cr"
+  },
+  "metadata": {
+    "description": "Trader desk plugin: 11 agents for TradingView + Alpaca paper trading."
+  },
+  "plugins": [
+    {
+      "name": "trader",
+      "source": "./plugins/trader",
+      "description": "An 11-agent trading desk for US stocks on TradingView + Alpaca, paper trading by default, with a risk-manager approval gate enforced by a hook.",
+      "version": "1.0.0",
+      "category": "finance"
+    }
+  ]
+}
