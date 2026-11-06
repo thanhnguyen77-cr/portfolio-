@@ -26,7 +26,8 @@ sys.path.insert(0, str(HERE))
 
 def md(text: str) -> str:
     """Small Markdown renderer: headings, lists, tables, code fences, bold/italic/code."""
-    lines = (text or "").replace("\r", "").split("\n")
+    text = re.sub(r"\s+[\u2014\u2013]\s+", ", ", text or "").replace("\u2014", "-").replace("\u2013", "-")
+    lines = text.replace("\r", "").split("\n")
     out: list[str] = []
     i = 0
 
@@ -108,6 +109,7 @@ def parse_transcript(path: Path) -> dict:
     calls: list[dict] = []
     guard: list[str] = []
     result: dict = {}
+    last_text: dict[str, str] = {}
     for line in path.read_text().splitlines():
         try:
             ev = json.loads(line)
@@ -117,6 +119,11 @@ def parse_transcript(path: Path) -> dict:
             result = ev
         msg = ev.get("message") or {}
         content = msg.get("content") if isinstance(msg.get("content"), list) else []
+        parent = ev.get("parent_tool_use_id")
+        if ev.get("type") == "assistant" and parent:
+            own = "\n".join(c.get("text", "") for c in content if c.get("type") == "text").strip()
+            if own:
+                last_text[parent] = own
         for c in content:
             if c.get("type") == "tool_use":
                 n, inp = c.get("name", ""), c.get("input") or {}
@@ -131,9 +138,19 @@ def parse_transcript(path: Path) -> dict:
                 txt = c.get("content")
                 txt = "\n".join(x.get("text", "") for x in txt if isinstance(x, dict)) if isinstance(txt, list) else str(txt or "")
                 if c.get("tool_use_id") in agents:
+                    if "The report follows:" in txt:
+                        body = txt.split("The report follows:", 1)[1]
+                        txt = "\n".join(l[2:] if l.startswith("  ") else l for l in body.splitlines())
+                    elif "Async agent launched" in txt:
+                        txt = ""
                     agents[c["tool_use_id"]]["report"] = txt
                 if "[trader order guard] BLOCKED" in txt:
                     guard.append(txt.strip())
+    for k in order:
+        if last_text.get(k):
+            agents[k]["report"] = last_text[k]
+        elif not agents[k].get("report"):
+            agents[k]["report"] = "(report not captured)"
     return {"agents": [agents[k] for k in order], "calls": calls, "guard": guard, "result": result}
 
 
@@ -193,7 +210,7 @@ def load_json(p: Path):
 
 
 def money(v) -> str:
-    return "—" if v is None else f"${v:,.2f}"
+    return "-" if v is None else f"${v:,.2f}"
 
 
 def build(run: Path) -> Path:
@@ -268,10 +285,10 @@ It never placed or changed an order itself.</p></header>""")
     for lab, val, sub in [
         ("Ending equity", money(end_eq), f"start {money(start_eq)}"),
         ("Desk return", f"{(end_eq / start_eq - 1) * 100:+.2f}%", f"max drawdown {mdd * 100:.2f}%"),
-        ("SPY (total return) same window", f"{spy_ret:+.2f}%" if spy_ret is not None else "—", "buy and hold, fully invested"),
+        ("SPY (total return) same window", f"{spy_ret:+.2f}%" if spy_ret is not None else "-", "buy and hold, fully invested"),
         ("Orders → fills", f"{len([t for t in trades])} → {ntr}", f"{len(closed)} closed · {len(wins)} winners"),
         ("Sessions", str(len({s['day'] for s in sessions})), f"{len(sessions)} turns · {secs // 60} min"),
-        ("Model cost", f"${cost:,.2f}" if cost else "—", "sum of reported session costs"),
+        ("Model usage", f"${cost:,.2f}" if cost else "n/a", "estimated at API rates; a subscription uses allowance, not money"),
     ]:
         H.append(f"<div class='kpi'><span>{lab}</span><b>{val}</b><small>{sub}</small></div>")
     H.append("</div>")
@@ -302,12 +319,12 @@ It never placed or changed an order itself.</p></header>""")
             ent = (f"{o['type']} {o.get('stop_price') or ''}{' / ' if o.get('stop_price') and o.get('limit_price') else ''}"
                    f"{o.get('limit_price') or ''} · {o['time_in_force']}")
             status = o["status"] + (" (open)" if t["open"] else "")
-            filled = f"{o.get('filled_at')} @ {o.get('filled_avg_price')}" if o.get("filled_at") else "—"
-            ex = f"{t['exit_day']} @ {t['exit_px']} ({t['exit_kind']})" if t["exit_px"] else (f"open, last {t['last']}" if t["entry"] else "—")
-            pnl = "—" if t["pnl"] is None else f"<span class='{'up' if t['pnl'] > 0 else 'down'}'>{t['pnl']:+,.2f}</span>" + ("" if t["exit_px"] else " <small>unrealised</small>")
-            r = "—" if t["r"] is None else f"{t['r']:+.2f}"
-            H.append(f"<tr><td>{o.get('submitted_at')}</td><td><b>{o['symbol']}</b></td><td>{ent}</td><td>{o['qty']}</td>"
-                     f"<td>{t['sl']['stop_price'] if t['sl'] else '—'} / {t['tp']['limit_price'] if t['tp'] else '—'}</td>"
+            filled = f"{o.get('filled_at')} @ {o.get('filled_avg_price')}" if o.get("filled_at") else "-"
+            ex = f"{t['exit_day']} @ {t['exit_px']} ({t['exit_kind']})" if t["exit_px"] else (f"open, last {t['last']}" if t["entry"] else "-")
+            pnl = "-" if t["pnl"] is None else f"<span class='{'up' if t['pnl'] > 0 else 'down'}'>{t['pnl']:+,.2f}</span>" + ("" if t["exit_px"] else " <small>unrealised</small>")
+            r = "-" if t["r"] is None else f"{t['r']:+.2f}"
+            H.append(f"<tr><td>{o.get('submitted_asof')}</td><td><b>{o['symbol']}</b></td><td>{ent}</td><td>{o['qty']}</td>"
+                     f"<td>{t['sl']['stop_price'] if t['sl'] else '-'} / {t['tp']['limit_price'] if t['tp'] else '-'}</td>"
                      f"<td>{status}</td><td>{filled}</td><td>{ex}</td><td>{pnl}</td><td>{r}</td></tr>")
         H.append("</tbody></table></div>")
     else:
@@ -316,7 +333,7 @@ It never placed or changed an order itself.</p></header>""")
     for t in trades:
         o = t["o"]
         sym = o["symbol"]
-        start = o.get("submitted_at")
+        start = o.get("submitted_at") or o.get("submitted_asof") or st["asof"]
         bs = [b for b in E.bars(sym, st["asof"]) if b["time"] >= (E.prev_day(start) or start)]
         pre = [b for b in E.bars(sym, start)][-30:]
         seq = pre + [b for b in bs if b["time"] > start]
@@ -333,7 +350,7 @@ It never placed or changed an order itself.</p></header>""")
                   "var(--down)" if f["kind"] == "stop_loss" else ("var(--up)" if f["kind"] == "take_profit" else "var(--accent)"))
                  for f in st.get("fills", []) if f["symbol"] == sym and f["date"] >= start]
         marks.insert(0, (start, next((v for d, v in pts if d == start), pts[0][1] if pts else 0), "plan date", "var(--muted)"))
-        H.append(f"<div class='card'><h3>{sym} — placed {start}</h3>" + svg_lines(
+        H.append(f"<div class='card'><h3>{sym} - placed {start}</h3>" + svg_lines(
             [{"name": sym, "color": "var(--text)", "points": pts, "levels": levels, "marks": marks, "w": 1.8}],
             height=240, fmt=lambda v: f"{v:,.2f}") + "</div>")
     H.append("</section>")
@@ -377,8 +394,8 @@ It never placed or changed an order itself.</p></header>""")
                 H.append("<ol class='agents'>")
                 for a in tr["agents"]:
                     rep = a.get("report") or "(no report)"
-                    H.append(f"<li><details><summary><b>{html.escape(a['agent'])}</b> — {html.escape(a['description'])}</summary>"
-                             f"<div class='brief'><h5>Brief from the desk lead</h5>{md(a['brief'][:4000])}</div>"
+                    H.append(f"<li><details><summary><b>{html.escape(a['agent'])}</b> - {html.escape(a['description'])}</summary>"
+                             f"<div class='brief'><h5>Brief from the desk lead</h5>{md(re.sub(r"<tools-used-before-summary>.*?</tools-used-before-summary>", "", a['brief'], flags=re.S)[:4000])}</div>"
                              f"<div class='report'><h5>Agent report</h5>{md(rep[:12000])}</div></details></li>")
                 H.append("</ol>")
             orders = [c for c in tr["calls"] if any(k in c["tool"] for k in ("place_stock_order", "cancel_order", "close_position", "replace_order", "create_alert"))]

@@ -25,6 +25,7 @@ def clean(s: str, limit: int = 9000) -> str:
     s = re.sub(r"/home/user/portfolio-/sim/runs/[^/\s`]+/desk/", "", s)
     s = re.sub(r"/home/user/portfolio-/", "", s)
     s = re.sub(r"<tools-used-before-summary>.*?</tools-used-before-summary>", "", s, flags=re.S)
+    s = re.sub(r"\s+[\u2014\u2013]\s+", ", ", s).replace("\u2014", "-").replace("\u2013", "-")
     return s.strip()[:limit]
 
 
