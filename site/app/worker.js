@@ -19,6 +19,7 @@ const HIST = {
 
 let py = null;
 const loaded = new Set();
+const metas = {};
 
 function post(type, data) { self.postMessage({ type, ...data }); }
 
@@ -50,6 +51,7 @@ async function loadDataset(ds) {
   if (ds === "live") {
     post("status", { text: "Loading latest market data" });
     const meta = JSON.parse(await text("data/live/meta.json"));
+    metas.live = meta;
     let n = 0;
     await Promise.all(meta.symbols.map(async (s) => {
       py.FS.writeFile(`/data/live/${s}.csv`, await text(`data/live/${s}.csv`));
@@ -97,6 +99,7 @@ self.onmessage = async (e) => {
     let result;
     if (cmd === "info") {
       result = await call(`import json; a = json.loads(ARGS); D.to_json(D.info(a["dataset"]))`);
+      result.meta = metas[args.dataset] || null;
     } else if (cmd === "run") {
       post("status", { text: "Running the desk" });
       result = await call(`import json; a = json.loads(ARGS)

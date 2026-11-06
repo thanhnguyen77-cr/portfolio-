@@ -279,7 +279,10 @@ function renderChips() {
     const set = state.watch[state.ds]; const s = c.dataset.s;
     set.has(s) ? set.delete(s) : set.add(s); c.setAttribute("aria-pressed", String(set.has(s)));
   }));
-  $("#dsHint").textContent = state.ds === "live" ? "Daily bars, refreshed each weekday after the US close." : "Real daily prices, September 2012 to September 2017.";
+  const meta = (state.info[state.ds] || {}).meta;
+  $("#dsHint").textContent = state.ds === "live"
+    ? (meta ? `Daily bars to the ${meta.last_date} close, refreshed each weekday after the US close.` : "Daily bars, refreshed each weekday after the US close.")
+    : "Real daily prices, September 2012 to September 2017.";
 }
 
 function settings() {
@@ -301,6 +304,7 @@ async function loadInfo() {
 }
 function applyInfo() {
   const inf = state.info[state.ds];
+  renderChips();
   for (const id of ["#asof", "#simStart", "#simEnd"]) { $(id).min = inf.first_tradable; $(id).max = inf.last; }
   $("#asof").value = state.ds === "hist2017" ? "2017-06-02" : inf.last;
   $("#simEnd").value = inf.last;

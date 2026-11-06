@@ -26,6 +26,15 @@ WATCHLIST = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AVGO", "TSLA", "J
 INDEXES = {"SPY": "SPY", "QQQ": "QQQ", "VIX": "^VIX"}
 
 
+def drop_unfinished(rows: list[tuple]) -> list[tuple]:
+    """Drop today's bar if the US session has not closed yet (it would be a partial day)."""
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("America/New_York"))
+    if rows and rows[-1][0] == now.strftime("%Y-%m-%d") and (now.hour, now.minute) < (16, 15):
+        return rows[:-1]
+    return rows
+
+
 def write(path: Path, rows: list[tuple]) -> None:
     with open(path, "w", newline="") as fh:
         w = csv.writer(fh)
@@ -74,6 +83,7 @@ def main() -> int:
             except Exception as e:  # noqa: BLE001
                 print(f"{name}: {'yfinance' if attempt == 0 else 'stooq'} failed: {e}", file=sys.stderr)
             time.sleep(1)
+        rows = drop_unfinished(rows)
         if len(rows) > 250:
             write(out / f"{name}.csv", rows)
             done.append(name)
