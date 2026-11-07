@@ -4,6 +4,8 @@ The Trader Skill turns Claude into a small trading desk for US stocks. It has el
 
 **Website:** https://thanhnguyen77-cr.github.io/portfolio-/ (built from `main` and published to the `gh-pages` branch by `.github/workflows/pages.yml`)
 
+**Game:** [Turbo Tide](https://thanhnguyen77-cr.github.io/portfolio-/jetski/) is a 3D jet ski race that runs in the browser and on iPhone: three laps around a lagoon against five AI riders, with ramps, tricks, coins, boost and procedural music. The code is in [`site/jetski/`](site/jetski/), and `.github/workflows/jetski-pages.yml` publishes it.
+
 > **Not financial advice.** This is a decision-support and paper-trading tool. Backtests describe the past, stops can gap, and you are responsible for every order. The desk starts in paper mode and cannot switch itself to live trading.
 
 ## Install

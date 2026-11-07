@@ -1,0 +1,52 @@
+name: Deploy Turbo Tide game
+
+# Publishes site/jetski to the gh-pages branch under /jetski/ and leaves the
+# rest of the published site as it is. Runs on pushes to the game branch.
+#
+# tools/build_site.py copies everything under site/, so once this branch is
+# merged into main the regular "Tests and GitHub Pages" workflow keeps the
+# game published too.
+
+on:
+  push:
+    branches: [claude/pensive-keller-hu45ls]
+    paths:
+      - "site/jetski/**"
+      - ".github/workflows/jetski-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-jetski
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the game files
+        run: |
+          test -f site/jetski/index.html
+          test -f site/jetski/vendor/three.module.min.js
+          for f in game audio; do cp "site/jetski/$f.js" "$RUNNER_TEMP/$f.mjs"; node --check "$RUNNER_TEMP/$f.mjs"; done
+
+      - name: Add the game to gh-pages under /jetski/
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git clone --depth 1 --branch gh-pages "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" _pages
+          rm -rf _pages/jetski
+          cp -r site/jetski _pages/jetski
+          touch _pages/.nojekyll
+          cd _pages
+          git add -A
+          if git diff --cached --quiet; then echo "The game on gh-pages is already up to date."; exit 0; fi
+          git commit -q -m "Publish Turbo Tide from ${GITHUB_SHA::7}"
+          git push origin gh-pages
+          echo "Published: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/jetski/"
