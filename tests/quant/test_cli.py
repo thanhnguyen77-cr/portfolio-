@@ -126,3 +126,58 @@ def test_universe_build_without_network_fails_cleanly(monkeypatch, tmp_path):
     monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
     res = runner.invoke(app, ["universe", "build", "ftse100"])
     assert res.exit_code == 1 and "could not build ftse100" in res.output
+
+
+def test_backtest_run_cli_with_robustness(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNYS_JPM", 2)):
+        store.write_bars(
+            make_bars(cat[iid], date(2021, 1, 4), date(2024, 6, 28), seed=seed, vendor="yfinance")
+        )
+    out = tmp_path / "tearsheet.html"
+    res = runner.invoke(
+        app,
+        [
+            "backtest",
+            "run",
+            "trend_following",
+            "--instruments",
+            "AAPL,JPM",
+            "--start",
+            "2023-01-03",
+            "--end",
+            "2024-06-28",
+            "--param",
+            "fast=5",
+            "--param",
+            "slow=20",
+            "--no-refresh",
+            "--bootstrap",
+            "--sensitivity",
+            "fast=5,10;slow=20,40",
+            "--html",
+            str(out),
+            "--out",
+            str(tmp_path / "run"),
+        ],
+    )
+    assert res.exit_code == 0, res.output
+    assert (
+        "trend_following" in res.output
+        and "deflated Sharpe" in res.output
+        and "parameter sensitivity" in res.output
+    )
+    assert out.exists() and (tmp_path / "run" / "result.json").exists()
+    bad = runner.invoke(app, ["backtest", "run", "nope", "--instruments", "AAPL", "--no-refresh"])
+    assert bad.exit_code != 0

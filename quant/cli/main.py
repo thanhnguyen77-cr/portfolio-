@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from quant import __version__
+from quant.cli.backtest_cmd import backtest_app
 from quant.cli.data_cmd import data_app
 from quant.cli.universe_cmd import screen, universe_app
 
@@ -37,6 +38,7 @@ def config(
 
 
 app.add_typer(data_app, name="data")
+app.add_typer(backtest_app, name="backtest")
 app.add_typer(universe_app, name="universe")
 app.command("screen")(screen)
 

@@ -37,14 +37,21 @@ from quant.data.corporate_actions import adjust_bars
 from quant.data.fx import FIXING_NOTE, FXRates
 
 _VARIANTS: dict[str, int] = defaultdict(int)
+_TRIALS: dict[str, list[float]] = defaultdict(list)
 
 
 def variant_count(strategy_name: str) -> int:
     return _VARIANTS[strategy_name]
 
 
+def trial_sharpes(strategy_name: str) -> list[float]:
+    """Annualised Sharpe of every run of this strategy in the current process (for the deflated Sharpe)."""
+    return list(_TRIALS[strategy_name])
+
+
 def reset_variant_counter() -> None:
     _VARIANTS.clear()
+    _TRIALS.clear()
 
 
 class BacktestConfig(BaseModel):
@@ -466,6 +473,9 @@ class Backtest:
             turnover=pd.Series(equity_df["turnover"].to_numpy(), index=eq_series.index),
             gross_exposure=pd.Series(equity_df["gross_exposure"].to_numpy(), index=eq_series.index),
         )
+        sr = metrics.get("sharpe")
+        if sr is not None and math.isfinite(sr):
+            _TRIALS[self.strategy.name].append(float(sr))
         fills_df = (
             pd.DataFrame([f.as_dict() for f in fills])
             if fills

@@ -28,6 +28,9 @@ quant data lineage                       # what was fetched, from where, how man
 quant universe build sp500               # constituents + reconstructed history (quality flag reported)
 quant universe show ftse100 --as-of 2024-06-28
 quant screen ftse100 --start 2023-01-01 --html screen.html   # liquidity / vol / data-quality ranking, not a forecast
+quant backtest run trend_following --instruments AAPL,JPM,VOD.L --start 2020-01-01 --base GBP \
+    --param fast=50 --param slow=200 --sensitivity "fast=20,50;slow=100,200" --walk-forward 252,63 \
+    --bootstrap --html tearsheet.html      # add --inline-js for a fully offline report
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -51,7 +54,9 @@ Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`
 FRED and Bank of England macro series), **S3 backtest engine** (event-driven, multi-currency, next-open fills,
 itemised costs incl. UK/US transaction taxes, look-ahead guards), **S4 universes** (Wikipedia constituents with
 shape checks, point-in-time membership with snapshot accumulation and S&P change-table reconstruction,
-coverage, evidence-based screen, HTML report builder). Next: S5 backtest robustness and tearsheet.
+coverage, evidence-based screen, HTML report builder), **S5 robustness** (walk-forward, parameter sensitivity,
+block-bootstrap Sharpe interval, deflated Sharpe ratio fed by a per-process variant counter, tearsheet with
+light/dark charts and table views, cross-sectional momentum, `quant backtest run`). Next: S6 technical + stats.
 
 ## Module map
 

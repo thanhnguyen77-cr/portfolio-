@@ -19,6 +19,9 @@
   .caveats li { margin:4px 0; } pre { background:var(--card); padding:12px; border-radius:6px; overflow-x:auto; }
   .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .kv div { background:var(--card); padding:8px 10px; border-radius:6px; }
   .kv b { display:block; font-size:.78rem; color:var(--muted); font-weight:500; }
+  .chart { width:100%; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  details summary { cursor:pointer; margin:6px 0; }
+  .chart-missing { padding:16px; color:var(--muted); font-size:.9rem; background:var(--card); }
 </style>
 </head>
 <body><main>
@@ -29,9 +32,74 @@
 <h2>{{ s.title }}</h2>
 {% if s.text %}<p>{{ s.text }}</p>{% endif %}
 {% if s.kv %}<div class="kv">{% for k, v in s.kv.items() %}<div><b>{{ k }}</b>{{ v }}</div>{% endfor %}</div>{% endif %}
-{% if s.table_html %}<div class="table-wrap">{{ s.table_html | safe }}</div>{% endif %}
+{% if s.chart_json %}<div class="chart" id="{{ s.chart_id }}" style="height:{{ s.chart_height }}px"></div>
+<script type="application/json" data-chart="{{ s.chart_id }}">{{ s.chart_json | safe }}</script>{% endif %}
+{% if s.table_html %}{% if s.chart_json %}<details><summary class="meta">Table view</summary>{% endif %}<div class="table-wrap">{{ s.table_html | safe }}</div>{% if s.chart_json %}</details>{% endif %}{% endif %}
 {% if s.html %}{{ s.html | safe }}{% endif %}
 </section>
 {% endfor %}
 {% include "_caveats.html" %}
-</main></body></html>
+</main>
+{% if has_charts %}
+{% if inline_js %}<script>{{ inline_js | safe }}</script>{% else %}<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>{% endif %}
+<script>
+// Colours are assigned here by role (series slot / polarity), never baked into the chart data, so the
+// same page renders correctly in light and dark mode. Palette: validated reference instance (dataviz skill).
+var THEMES = {
+  light: {surface: "#fcfcfb", ink: "#52514e", primary: "#0b0b0b", grid: "#e1e0d9", axis: "#c3c2b7",
+          series: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"], negative: "#e34948"},
+  dark:  {surface: "#1a1a19", ink: "#c3c2b7", primary: "#f0efec", grid: "#2c2c2a", axis: "#383835",
+          series: ["#3987e5", "#d95926", "#199e70", "#c98500"], negative: "#e66767"}
+};
+function scheme() {
+  var forced = document.documentElement.getAttribute("data-theme");
+  if (forced === "dark" || forced === "light") return forced;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function styled(trace, th) {
+  var t = Object.assign({}, trace);
+  var meta = t.meta || {};
+  if (meta.role === "series") {
+    var col = th.series[meta.slot % th.series.length];
+    t.line = Object.assign({}, t.line || {}, {color: col, width: 2});
+    t.marker = Object.assign({}, t.marker || {}, {color: col, size: 8});
+    if (t.fill) t.fillcolor = col + "26";
+  } else if (meta.role === "polarity") {
+    var colours = (t.y || []).map(function (v) { return v >= 0 ? th.series[0] : th.negative; });
+    t.marker = Object.assign({}, t.marker || {}, {color: colours, line: {width: 0}});
+  }
+  return t;
+}
+function renderAll() {
+  var th = THEMES[scheme()];
+  var specs = document.querySelectorAll("script[type='application/json'][data-chart]");
+  specs.forEach(function (el) {
+    var spec = JSON.parse(el.textContent);
+    var data = spec.data.map(function (tr) { return styled(tr, th); });
+    var axis = function (a) { return Object.assign({gridcolor: th.grid, linecolor: th.axis, zerolinecolor: th.axis,
+      tickfont: {color: th.ink}, title: Object.assign({font: {color: th.ink}}, (a && a.title) || {})}, a || {}); };
+    var layout = Object.assign({}, spec.layout, {
+      paper_bgcolor: th.surface, plot_bgcolor: th.surface,
+      font: {color: th.ink, family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 12},
+      xaxis: axis(spec.layout.xaxis), yaxis: axis(spec.layout.yaxis),
+      margin: {l: 60, r: 16, t: 16, b: 48}, hovermode: spec.layout.hovermode || "x unified",
+      showlegend: spec.data.length > 1, legend: {orientation: "h", y: -0.22, font: {color: th.ink}}, bargap: 0.35
+    });
+    Plotly.react(el.getAttribute("data-chart"), data, layout, {displayModeBar: false, responsive: true});
+  });
+}
+if (window.Plotly) {
+  renderAll();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+} else {
+  // Charting library unavailable (offline, blocked CDN): fall back to the table views and say so.
+  document.querySelectorAll(".chart").forEach(function (el) {
+    el.textContent = "Chart library not loaded (offline or CDN blocked). The table view below holds the same data; "
+      + "regenerate with inline_plotly=True / --inline-js for a fully offline report.";
+    el.classList.add("chart-missing");
+  });
+  document.querySelectorAll("details").forEach(function (d) { d.open = true; });
+}
+</script>
+{% endif %}
+</body></html>
