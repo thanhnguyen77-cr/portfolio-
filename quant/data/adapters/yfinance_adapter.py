@@ -49,8 +49,7 @@ def default_history(symbol: str, start: date, end: date, interval: str) -> pd.Da
         interval=interval,
         auto_adjust=False,
         actions=True,
-        raise_errors=True,
-    )
+    )  # an unknown symbol comes back as an empty frame, which get_bars reports as a per-instrument error
 
 
 def default_fundamentals(symbol: str) -> dict[str, Any]:

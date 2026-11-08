@@ -2,17 +2,21 @@
 
 One request fetches several series codes (e.g. IUDBEDR Bank Rate, IUDSOIA SONIA). The export returns
 `DATE,<CODE>,<CODE>...` with dates like `02 Jan 2024`; a requested code missing from the response is
-reported as a per-series error.
+reported as a per-series error. The export intermittently answers an HTML "Error" page with status 200
+(observed live on 2026-11-08, apparently throttling); such a body is retried a few times with a pause and
+then reported as an error rather than parsed.
 """
 
 from __future__ import annotations
 
 import io
+import time
 from collections.abc import Sequence
 from datetime import date
 
 import pandas as pd
 
+from quant.core.errors import AdapterError
 from quant.core.time import to_date
 from quant.data.adapters.base import AdapterResult, BaseHTTPAdapter, Capability, RateLimit
 from quant.data.adapters.fred import _empty_macro, macro_frame
@@ -24,6 +28,28 @@ class BankOfEnglandAdapter(BaseHTTPAdapter):
     name = "boe"
     identifier_key = "boe"
     rate_limit = RateLimit(min_interval_s=1.0, note="public website export; be gentle")
+    html_retries: int = 3
+    html_retry_wait_s: float = 2.0
+
+    @staticmethod
+    def looks_like_html(text: str) -> bool:
+        head = text.lstrip()[:200].lower()
+        return head.startswith("<!doctype") or head.startswith("<html")
+
+    def _fetch_csv(self, params: dict[str, str]) -> str:
+        """GET the export, retrying when the body is the HTML error page instead of CSV."""
+        last = ""
+        for attempt in range(self.html_retries):
+            text = self._http("GET", IADB_URL, params=params).text
+            if not self.looks_like_html(text):
+                return text
+            last = text
+            if attempt < self.html_retries - 1:
+                time.sleep(self.html_retry_wait_s * (attempt + 1))
+        raise AdapterError(
+            f"BoE IADB returned an HTML error page instead of CSV {self.html_retries} times "
+            f"(throttling?); try again later: {last.strip()[:60]!r}"
+        )
 
     def capabilities(self) -> frozenset[Capability]:
         return frozenset({Capability.MACRO})
@@ -43,8 +69,7 @@ class BankOfEnglandAdapter(BaseHTTPAdapter):
         }
         errors: dict[str, str] = {}
         try:
-            resp = self._http("GET", IADB_URL, params=params)
-            frame = self.parse_csv(resp.text, ids, errors)
+            frame = self.parse_csv(self._fetch_csv(params), ids, errors)
         except Exception as exc:  # noqa: BLE001 - the whole batch failed; report every series
             frame = _empty_macro()
             for sid in ids:

@@ -127,3 +127,26 @@ def test_service_get_macro_refreshes_tail_when_stale(tmp_path, fake_macro, catal
     assert fake_macro.calls[-1] == (["DGS10"], date(2024, 7, 11), date(2024, 7, 19))
     assert s.index.max() == pd.Timestamp("2024-07-19")
     assert svc.get_macro("NOPE", date(2024, 6, 3), date(2024, 7, 19)).empty
+
+
+def test_boe_retries_html_error_pages_then_reports():
+    from quant.data.adapters.boe import BankOfEnglandAdapter
+
+    csv_text = (FIXTURES / "boe_IUDBEDR_IUDSOIA.csv").read_text()
+    html = "<!DOCTYPE html><html><head><title>Error</title></head><body>oops</body></html>"
+
+    class _Resp:
+        def __init__(self, text):
+            self.text = text
+
+    bodies = [html, csv_text]
+    adapter = BankOfEnglandAdapter()
+    adapter.html_retry_wait_s = 0.0
+    adapter._http = lambda method, url, **kw: _Resp(bodies.pop(0))
+    res = adapter.get_macro_series(["IUDBEDR"], date(2024, 1, 1), date(2024, 12, 31))
+    assert res.errors == {} and len(res.frame) > 0
+    always_html = BankOfEnglandAdapter()
+    always_html.html_retry_wait_s = 0.0
+    always_html._http = lambda method, url, **kw: _Resp(html)
+    res2 = always_html.get_macro_series(["IUDBEDR", "IUDSOIA"], date(2024, 1, 1), date(2024, 12, 31))
+    assert set(res2.errors) == {"IUDBEDR", "IUDSOIA"} and "HTML error page" in res2.errors["IUDBEDR"]

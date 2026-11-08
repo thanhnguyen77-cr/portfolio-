@@ -3,6 +3,8 @@
 from quant.macro.catalog import MACRO_SERIES, MacroSeries, macro_series_spec
 from quant.macro.inflation import annualised_3m, breakeven, inflation_regime, mom, real_rate, yoy
 from quant.macro.regime import cross_asset_dashboard, growth_inflation_quadrant
+from quant.macro.verify import summarize as summarize_verification
+from quant.macro.verify import verify_catalog
 from quant.macro.yield_curve import curvature, curve_snapshot, inversion_flags, slope
 
 __all__ = [
@@ -20,5 +22,7 @@ __all__ = [
     "mom",
     "real_rate",
     "slope",
+    "summarize_verification",
+    "verify_catalog",
     "yoy",
 ]

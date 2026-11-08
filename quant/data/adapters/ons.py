@@ -1,8 +1,12 @@
-"""Office for National Statistics time series (UK) via the public `timeseries` JSON endpoint.
+"""Office for National Statistics time series (UK) from the ONS website's JSON endpoint.
 
-Series are addressed as `DATASET/SERIES` (e.g. `MM23/L55O` for CPIH annual rate, `LMS/MGSX` for the
-unemployment rate). Monthly observations are preferred, then quarterly, then annual; dates are the start of
-the period. ONS revises history, so re-fetching can restate values (the store keeps the latest).
+The dedicated `api.ons.gov.uk/timeseries` API was retired on 25 November 2024 (its 404 body says so). The
+same series are served by the website as `https://www.ons.gov.uk/<taxonomy>/timeseries/<series>/<dataset>/data`,
+where <taxonomy> is the section the dataset lives under. Series are addressed as `DATASET/SERIES` (e.g.
+`MM23/L55O` for CPIH annual rate) for the datasets in `DATASET_PATHS`, or as a full site URI such as
+`/economy/inflationandpriceindices/timeseries/l55o/mm23` for anything else. Monthly observations are
+preferred, then quarterly, then annual; dates are the start of the period. ONS revises history, so
+re-fetching can restate values (the store keeps the latest).
 """
 
 from __future__ import annotations
@@ -18,7 +22,14 @@ from quant.core.time import to_date
 from quant.data.adapters.base import AdapterResult, BaseHTTPAdapter, Capability, RateLimit
 from quant.data.adapters.fred import _empty_macro, macro_frame
 
-ONS_URL = "https://api.ons.gov.uk/timeseries/{series}/dataset/{dataset}/data"
+ONS_BASE = "https://www.ons.gov.uk"
+# dataset id -> website section (verified live on 2026-11-08); extend or pass a full URI as the series id
+DATASET_PATHS: dict[str, str] = {
+    "MM23": "/economy/inflationandpriceindices",
+    "LMS": "/employmentandlabourmarket/peoplenotinwork/unemployment",  # MGSX; other LMS series need a URI
+    "MGDP": "/economy/grossdomesticproductgdp",
+    "DRSI": "/businessindustryandtrade/retailindustry",
+}
 _MONTHS = {
     m: i
     for i, m in enumerate(
@@ -50,10 +61,44 @@ class ONSAdapter(BaseHTTPAdapter):
 
     @staticmethod
     def split_id(series_id: str) -> tuple[str, str]:
-        if "/" not in series_id:
-            raise ValueError(f"ONS series must be DATASET/SERIES, got {series_id!r}")
-        dataset, series = series_id.split("/", 1)
+        """'MM23/L55O' -> ('MM23', 'L55O'); a full URI '/.../timeseries/l55o/mm23' -> ('MM23', 'L55O')."""
+        sid = series_id.strip()
+        if sid.startswith("/"):
+            parts = [p for p in sid.split("/") if p]
+            if len(parts) < 3 or parts[-3].lower() != "timeseries":
+                raise ValueError(f"ONS URI must end in /timeseries/<series>/<dataset>, got {series_id!r}")
+            return parts[-1].upper(), parts[-2].upper()
+        if "/" not in sid:
+            raise ValueError(f"ONS series must be DATASET/SERIES or a site URI, got {series_id!r}")
+        dataset, series = sid.split("/", 1)
         return dataset.upper(), series.upper()
+
+    @staticmethod
+    def canonical_id(series_id: str) -> str:
+        """'mm23/l55o' -> 'MM23/L55O'; a site URI is kept as a lower-case path."""
+        sid = series_id.strip()
+        if sid.startswith("/"):
+            ONSAdapter.split_id(sid)  # validate
+            return sid.rstrip("/").lower()
+        dataset, series = ONSAdapter.split_id(sid)
+        return f"{dataset}/{series}"
+
+    @staticmethod
+    def url_for(series_id: str) -> str:
+        """Website JSON URL for a `DATASET/SERIES` id (known datasets) or a full site URI."""
+        sid = series_id.strip()
+        if sid.startswith("/"):
+            ONSAdapter.split_id(sid)  # validate
+            return f"{ONS_BASE}{sid.rstrip('/').lower()}/data"
+        dataset, series = ONSAdapter.split_id(sid)
+        section = DATASET_PATHS.get(dataset)
+        if section is None:
+            raise ValueError(
+                f"no website section known for ONS dataset {dataset!r}; pass the full URI "
+                f"(e.g. '/economy/inflationandpriceindices/timeseries/{series.lower()}/{dataset.lower()}') "
+                f"or add it to DATASET_PATHS"
+            )
+        return f"{ONS_BASE}{section}/timeseries/{series.lower()}/{dataset.lower()}/data"
 
     @staticmethod
     def parse_payload(series_id: str, payload: Mapping[str, Any], vendor: str = "ons") -> pd.DataFrame:
@@ -78,9 +123,8 @@ class ONSAdapter(BaseHTTPAdapter):
         frames, errors = [], {}
         for sid in series_ids:
             try:
-                dataset, series = self.split_id(sid)
-                payload = self._http("GET", ONS_URL.format(series=series, dataset=dataset)).json()
-                df = self.parse_payload(sid.upper(), payload, self.name)
+                payload = self._http("GET", self.url_for(sid)).json()
+                df = self.parse_payload(self.canonical_id(sid), payload, self.name)
                 df = df[(df["date"] >= pd.Timestamp(start_d)) & (df["date"] <= pd.Timestamp(end_d))]
             except Exception as exc:  # noqa: BLE001
                 errors[sid] = f"{type(exc).__name__}: {str(exc)[:200]}"

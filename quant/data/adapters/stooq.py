@@ -89,7 +89,10 @@ class StooqAdapter(BaseHTTPAdapter):
     def parse_csv(self, inst: Instrument, text: str, start: date, end: date) -> pd.DataFrame:
         head = text.lstrip()[:200].lower()
         if not head.startswith("date"):
-            raise AdapterError(f"stooq returned no CSV for {inst.instrument_id}: {text.strip()[:80]!r}")
+            raise AdapterError(
+                f"stooq returned an HTML page instead of CSV for {inst.instrument_id} (bot check or daily "
+                f"limit; observed for identified non-browser clients on 2026-11-08): {text.strip()[:60]!r}"
+            )
         raw = pd.read_csv(io.StringIO(text))
         raw.columns = [c.strip() for c in raw.columns]
         fm = self.field_map

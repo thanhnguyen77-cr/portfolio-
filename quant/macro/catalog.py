@@ -1,5 +1,6 @@
 """Named macro series. `verified=False` marks ids that have not yet been checked against the provider;
-the dashboard reports which series it could not load rather than guessing."""
+the dashboard reports which series it could not load rather than guessing. Every FRED, BoE and ONS id
+below was fetched live on 2026-11-08 (`quant macro verify`); re-run that command after provider changes."""
 
 from __future__ import annotations
 
@@ -59,27 +60,33 @@ MACRO_SERIES: dict[str, MacroSeries] = {
     # United Kingdom (Bank of England / ONS)
     "uk_bank_rate": _S("uk_bank_rate", "boe", "IUDBEDR", "daily", "percent", "uk", "Bank Rate"),
     "uk_sonia": _S(
-        "uk_sonia", "boe", "IUDSOIA", "daily", "percent", "uk", "SONIA overnight rate", verified=False
+        "uk_sonia", "boe", "IUDSOIA", "daily", "percent", "uk", "SONIA overnight rate", verified=True
     ),
     "uk_10y": _S(
-        "uk_10y", "boe", "IUDMNPY", "daily", "percent", "uk", "10-year gilt nominal par yield", verified=False
+        "uk_10y", "boe", "IUDMNPY", "daily", "percent", "uk", "10-year gilt nominal par yield", verified=True
     ),
     "uk_5y": _S(
-        "uk_5y", "boe", "IUDSNPY", "daily", "percent", "uk", "5-year gilt nominal par yield", verified=False
+        "uk_5y", "boe", "IUDSNPY", "daily", "percent", "uk", "5-year gilt nominal par yield", verified=True
     ),
     "uk_20y": _S(
-        "uk_20y", "boe", "IUDLNPY", "daily", "percent", "uk", "20-year gilt nominal par yield", verified=False
+        "uk_20y", "boe", "IUDLNPY", "daily", "percent", "uk", "20-year gilt nominal par yield", verified=True
     ),
     "uk_cpih": _S("uk_cpih", "ons", "MM23/L55O", "monthly", "percent", "uk", "CPIH annual rate"),
     "uk_cpi": _S("uk_cpi", "ons", "MM23/D7G7", "monthly", "percent", "uk", "CPI annual rate"),
     "uk_cpi_index": _S(
-        "uk_cpi_index", "ons", "MM23/D7BT", "monthly", "index", "uk", "CPI index (2015=100)", verified=False
+        "uk_cpi_index", "ons", "MM23/D7BT", "monthly", "index", "uk", "CPI index (2015=100)", verified=True
     ),
     "uk_unemployment": _S(
-        "uk_unemployment", "ons", "LMS/MGSX", "monthly", "percent", "uk", "Unemployment rate (16+)"
+        "uk_unemployment",
+        "ons",
+        "/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms",
+        "monthly",
+        "percent",
+        "uk",
+        "Unemployment rate (16+)",
     ),
     "uk_gdp_monthly": _S(
-        "uk_gdp_monthly", "ons", "MGDP/ECY2", "monthly", "index", "uk", "Monthly GDP index", verified=False
+        "uk_gdp_monthly", "ons", "MGDP/ECY2", "monthly", "index", "uk", "Monthly GDP index", verified=True
     ),
     "uk_retail_sales": _S(
         "uk_retail_sales",
@@ -89,7 +96,16 @@ MACRO_SERIES: dict[str, MacroSeries] = {
         "index",
         "uk",
         "Retail sales volume index",
-        verified=False,
+        verified=True,
+    ),
+    "uk_employment_rate": _S(
+        "uk_employment_rate",
+        "ons",
+        "/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/lf24/lms",
+        "monthly",
+        "percent",
+        "uk",
+        "Employment rate, 16-64, SA",
     ),
 }
 

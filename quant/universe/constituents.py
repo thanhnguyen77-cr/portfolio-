@@ -170,9 +170,15 @@ def parse_constituents(
             break
     if chosen is None:
         shapes = [(len(t), _flatten_columns(t)[:4]) for t in tables]
+        hint = (
+            " Wikipedia removed the components table from the Nasdaq-100 article (observed 2026-11-08); "
+            "import the constituents from your own source with `quant universe import ndx100 members.csv`."
+            if spec.name == "ndx100"
+            else ""
+        )
         raise UniverseError(
             f"{spec.name}: constituents table not found or shape drifted (want {lo}-{hi} rows with "
-            f"{spec.symbol_cols[0]!r} and {spec.name_cols[0]!r}); tables seen: {shapes}"
+            f"{spec.symbol_cols[0]!r} and {spec.name_cols[0]!r}); tables seen: {shapes}.{hint}"
         )
     sym_col = _pick(list(chosen.columns), spec.symbol_cols)
     name_col = _pick(list(chosen.columns), spec.name_cols)
@@ -239,7 +245,12 @@ def parse_sp500_changes(html: str) -> pd.DataFrame:
             if out.empty:
                 raise UniverseError("S&P 500 changes table parsed but no dated rows found")
             return out
-    raise UniverseError("S&P 500 changes table not found: page layout may have drifted")
+    raise UniverseError(
+        "S&P 500 changes table not found: Wikipedia dropped the 'Selected changes' section from the list "
+        "page (observed 2026-11-08), so history cannot be reconstructed from it; the universe stays "
+        "current_only unless you import intervals (`quant universe import sp500 changes.csv`) or pass a "
+        "saved copy of the old page as changes_html"
+    )
 
 
 # ----------------------------------------------------------------------------- instruments

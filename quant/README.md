@@ -48,6 +48,7 @@ quant macro series us_cpi --start 2015-01-01
 quant macro curve --region us            # tenor snapshot, 10y-2y slope, inversion flags
 quant macro inflation --region uk        # YoY / 3m annualised / regime labels
 quant macro dashboard --region us --html board.html   # cross-asset regime board from cached inputs
+quant macro verify --region uk           # fetch every catalogued series live; exits 1 if an id fails
 quant optimize weights -i AAPL,MSFT,JPM --method hrp --start 2020-01-01 --html weights.html
 quant optimize weights -i AAPL,MSFT,JPM --method bl --view AAPL:0.10@0.5 --market-weights AAPL=0.5,MSFT=0.3,JPM=0.2
 quant optimize frontier -i AAPL,MSFT,JPM --points 10      # long-only frontier from shrunk historical means
@@ -91,9 +92,19 @@ splits, denomination changes, look-ahead poison), and to internal consistency (S
 fills; the vectorised rebalance equals the engine; ledger cash and positions re-derive from the event log;
 every adapter honours the contract). They do **not** establish that any vendor still serves the formats the
 fixtures were recorded from (that is what the opt-in live tests are for), that any strategy earns money, or
-that the code is free of errors. The live smoke tests could not be executed from the environment this was
-built in: outbound HTTP to the vendor hosts is blocked there, so they are untested against the real
-endpoints at the time of writing.
+that the code is free of errors.
+
+Live checks were run once on 2026-11-08 from the build environment after its network was opened to the
+vendor hosts. Outcome: yfinance, FRED and Bank of England requests succeeded and every catalogued FRED and
+BoE id resolved (`quant macro verify`), although after a couple of dozen requests the BoE export started
+answering an HTML error page with status 200, which the adapter now detects, retries and reports instead of
+parsing; the ONS `api.ons.gov.uk` endpoint turned out to have been retired in
+November 2024, so the adapter was re-pointed at the ONS website's JSON endpoint and all catalogued ONS ids
+now resolve; Wikipedia still serves the S&P 500, FTSE 100 and FTSE 250 constituent tables but has removed
+the S&P 500 "selected changes" section and the Nasdaq-100 components list, so S&P history reconstruction and
+the Nasdaq-100 universe now need a CSV import; Stooq answered an identified non-browser client with an HTML
+page rather than CSV, so that adapter is not usable as-is. SEC EDGAR was not exercised live because it
+requires a personal contact address in the User-Agent.
 
 ## Status
 
@@ -124,9 +135,10 @@ a synthetic mini-dataset exercising every stage offline, examples, a `--help` sm
 command, this status).
 
 Honest summary of where it stands: the research, backtesting and paper-trading pipeline runs end to end
-offline and is covered by 400-odd tests; the live vendor endpoints have been exercised only through
-recorded fixtures in this build environment; several UK macro series ids and some fee-table entries are
-still marked unverified; and nothing here has been shown to make money, because that was never the claim.
+offline and is covered by 400-odd tests; yfinance, FRED, BoE, ONS and the Wikipedia constituent tables have
+been exercised live once (see Tests); the Nasdaq-100 list and S&P 500 change history are no longer on
+Wikipedia and need an import; some fee-table entries are still marked unverified; and nothing here has been
+shown to make money, because that was never the claim.
 
 ## Module map
 
@@ -159,16 +171,21 @@ still marked unverified; and nothing here has been shown to make money, because 
   without roll modelling, so their long-run returns carry roll gaps.
 
 **Data**
-- Free sources give **approximate** point-in-time universes. S&P 500 history is reconstructed from the
-  Wikipedia changes table (irregular before ~2008 and dependent on that page's shape); FTSE 100/250 are
+- Free sources give **approximate** point-in-time universes. Wikipedia removed the S&P 500 "selected
+  changes" table (observed 2026-11-08), so S&P history can only be reconstructed from a saved copy of the old
+  page or an imported CSV of intervals; the Nasdaq-100 components table is gone too, so `ndx100` needs
+  `quant universe import`. S&P 500, FTSE 100 and FTSE 250 current constituents still load; all are
   `current_only` until snapshots accumulate. Every backtest reports its survivorship coverage.
 - Yahoo closes are split-adjusted but not dividend-adjusted and are stored as such; dividend currencies for
   UK payers that declare in USD are a known soft spot, flagged by validation rather than resolved.
-- Vendor response formats are pinned by recorded fixtures. The opt-in live tests (`pytest -m live`) check
-  three endpoints; they could not be run from the environment this was built in, so a vendor format change
-  since the fixtures were recorded would show up only when you run them.
-- Several UK macro series ids in `quant/macro/catalog.py` carry `verified: false`; the Companies House
-  adapter indexes filings but does not parse iXBRL accounts; Nasdaq Data Link anonymous quotas are small.
+- Vendor response formats are pinned by recorded fixtures and were checked live once (2026-11-08); a later
+  vendor change shows up only when you run `pytest -m live tests/quant` and `quant macro verify`.
+- Stooq serves an HTML page, not CSV, to identified non-browser clients, so the Stooq adapter currently
+  fails with that message; the Bank of England export throttles bursts of requests with an HTML error page
+  (the adapter retries three times, then reports it); the Companies House adapter indexes filings but does
+  not parse iXBRL accounts;
+  Nasdaq Data Link anonymous quotas are small; Alpaca, Polygon, Tiingo, NDL and Companies House have been
+  exercised only against recorded fixtures (they need API keys).
 - FX conversion uses the vendor's ~17:00 New York daily fix for London 16:30 closes (documented in
   `quant/data/fx.py`); it is forward-filled, never backfilled.
 - Fee and levy rates live in `quant/config/fees.yaml` with `verified` flags; the PTM levy increase and the

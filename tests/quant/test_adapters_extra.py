@@ -147,7 +147,7 @@ def test_stooq_parses_csv_and_reports_non_csv_bodies(catalog):
     )
     adapter = StooqAdapter(session=session, drop_unfinished_session=False)
     res = adapter.get_bars([catalog["XNAS_AAPL"], catalog["XLON_VOD"]], START, END)
-    assert res.ok == ["XNAS_AAPL"] and "no CSV" in res.errors["XLON_VOD"]
+    assert res.ok == ["XNAS_AAPL"] and "HTML page instead of CSV" in res.errors["XLON_VOD"]
     bars = res.frame
     assert len(bars) == 5 and bars["close"].iloc[0] == pytest.approx(216.75)
     _check_bars(bars, "stooq", "split_adjusted")

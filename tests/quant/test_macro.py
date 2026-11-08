@@ -71,8 +71,23 @@ def test_ons_adapter_through_the_seam():
         res.frame["value"].tolist() == [3.8, 3.8, 3.0, 2.8] and (res.frame["series_id"] == "MM23/L55O").all()
     )
     assert "ValueError" in res.errors["BAD"] and urls == [
-        "https://api.ons.gov.uk/timeseries/L55O/dataset/MM23/data"
+        "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l55o/mm23/data"
     ]
+    assert (
+        ONSAdapter.url_for("LMS/MGSX")
+        == "https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms/data"
+    )
+    uri = "/economy/grossdomesticproductgdp/timeseries/ecy2/mgdp"
+    assert ONSAdapter.url_for(uri) == f"https://www.ons.gov.uk{uri}/data"
+    assert ONSAdapter.split_id(uri) == ("MGDP", "ECY2")
+    assert ONSAdapter.canonical_id("mm23/l55o") == "MM23/L55O" and ONSAdapter.canonical_id(uri + "/") == uri
+    adapter._http = lambda method, url, **kw: _Resp()
+    by_uri = adapter.get_macro_series([uri], date(2024, 2, 1), date(2024, 5, 31))
+    assert by_uri.errors == {} and (by_uri.frame["series_id"] == uri).all()
+    with pytest.raises(ValueError, match="no website section"):
+        ONSAdapter.url_for("ZZZZ/ABCD")
+    with pytest.raises(ValueError, match="timeseries"):
+        ONSAdapter.url_for("/economy/not/a/timeseries/path")
     assert adapter.get_macro_series(["MM23/L55O"], date(2030, 1, 1), date(2030, 2, 1)).errors
 
 
@@ -82,7 +97,8 @@ def test_catalog_integrity():
     assert all("/" in s.series_id for s in MACRO_SERIES.values() if s.vendor == "ons")
     assert macro_series_spec("us_cpi").series_id == "CPIAUCSL"
     unverified = [s.name for s in MACRO_SERIES.values() if not s.verified]
-    assert "uk_10y" in unverified and "us_10y" not in unverified
+    assert unverified == []  # every id was fetched live on 2026-11-08; `quant macro verify` re-checks
+    assert macro_series_spec("uk_unemployment").series_id.startswith("/employmentandlabourmarket/")
     assert len(series_for_region("us")) + len(series_for_region("uk")) == len(series_for_region("both"))
     with pytest.raises(KeyError):
         macro_series_spec("nope")
@@ -189,3 +205,26 @@ def test_service_macro_series_and_dashboard(tmp_path, catalog, monkeypatch):
     assert board["quadrant"] in {"reflation / overheating", "goldilocks / disinflationary growth"}
     with pytest.raises(ConfigError):
         svc.macro_dashboard("eu")
+
+
+def test_verify_catalog_reports_ok_fail_and_skipped():
+    from quant.macro.catalog import MacroSeries
+    from quant.macro.verify import summarize, verify_catalog
+
+    idx = pd.bdate_range("2024-01-01", "2024-06-28")
+    fred = FakeMacroAdapter({"DGS10": pd.Series(4.0, index=idx)}, name="fred")
+    specs = [
+        MacroSeries("us_10y", "fred", "DGS10", "daily", "percent", "us", "ok series", verified=False),
+        MacroSeries("us_missing", "fred", "NOPE", "monthly", "index", "us", "fails", verified=True),
+        MacroSeries("uk_cpih", "ons", "MM23/L55O", "monthly", "percent", "uk", "no adapter"),
+    ]
+    table = verify_catalog({"fred": fred}, series=specs, end=date(2024, 6, 28))
+    by = table.set_index("name")
+    assert by.loc["us_10y", "status"] == "ok" and by.loc["us_10y", "n_obs"] > 30
+    assert by.loc["us_10y", "last_date"] == date(2024, 6, 28)
+    assert by.loc["us_missing", "status"] == "fail" and by.loc["us_missing", "error"]
+    assert by.loc["uk_cpih", "status"] == "skipped" and "no configured adapter" in by.loc["uk_cpih", "error"]
+    text = summarize(table)
+    assert "flip to True" in text and "us_10y" in text and "investigate" in text and "us_missing" in text
+    # daily series use a short look-back, quarterly a long one (so a lagged quarterly print still counts)
+    assert fred.calls[0][1] == date(2024, 6, 28) - pd.Timedelta(days=60).to_pytimedelta()

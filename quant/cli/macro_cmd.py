@@ -171,3 +171,28 @@ def dashboard(
             path=html,
         )
         console.print(f"wrote {html}")
+
+
+@macro_app.command("verify")
+def verify(
+    region: RegionOpt = "both",
+    vendor: Annotated[
+        str | None, typer.Option("--vendor", help="Only this vendor (fred | boe | ons).")
+    ] = None,
+    config_file: ConfigOption = None,
+) -> None:
+    """Fetch every catalogued series live and report which ids resolve (network; nothing is cached)."""
+    from quant.macro.catalog import MACRO_SERIES, series_for_region
+    from quant.macro.verify import summarize, verify_catalog
+
+    svc = _service(config_file)
+    specs = list(MACRO_SERIES.values()) if region == "both" else series_for_region(region)
+    if vendor:
+        specs = [s for s in specs if s.vendor == vendor]
+    table = verify_catalog(svc.adapters, series=specs)
+    console.print(
+        frame_table(table.drop(columns=["frequency"]), title="macro catalogue verification", max_rows=200)
+    )
+    console.print(summarize(table))
+    if (table["status"] == "fail").any():
+        raise typer.Exit(code=1)
