@@ -31,6 +31,14 @@ quant screen ftse100 --start 2023-01-01 --html screen.html   # liquidity / vol /
 quant backtest run trend_following --instruments AAPL,JPM,VOD.L --start 2020-01-01 --base GBP \
     --param fast=50 --param slow=200 --sensitivity "fast=20,50;slow=100,200" --walk-forward 252,63 \
     --bootstrap --html tearsheet.html      # add --inline-js for a fully offline report
+quant analyze indicators VOD.L           # latest indicators + trend / volatility regime labels
+quant analyze regime SPX --vol-index VIX --markov
+quant analyze cointegration SHEL.L BP.L  # Engle-Granger, Johansen, hedge ratio, half-life, spread z
+quant analyze garch UKX --model GJR      # GARCH-family fit and volatility forecast
+quant fundamentals fetch AAPL MSFT       # statements + earnings dates (QUANT_SEC_USER_AGENT enables EDGAR)
+quant fundamentals ratios AAPL --as-of 2024-06-28   # only what had been filed by that date
+quant fundamentals dcf AAPL --growth 0.06 --terminal 0.025 --beta 1.2
+quant fundamentals scores sp500          # percentile ranks across a stored universe (descriptive)
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -56,7 +64,13 @@ itemised costs incl. UK/US transaction taxes, look-ahead guards), **S4 universes
 shape checks, point-in-time membership with snapshot accumulation and S&P change-table reconstruction,
 coverage, evidence-based screen, HTML report builder), **S5 robustness** (walk-forward, parameter sensitivity,
 block-bootstrap Sharpe interval, deflated Sharpe ratio fed by a per-process variant counter, tearsheet with
-light/dark charts and table views, cross-sectional momentum, `quant backtest run`). Next: S6 technical + stats.
+light/dark charts and table views, cross-sectional momentum, `quant backtest run`). **S6 technical + stats** (Wilder RSI/ATR, MACD, ADX, stochastic, Bollinger/Keltner, OBV/VWAP/MFI, pivot
+support/resistance, volatility, trend, rule-based and Markov-switching regimes; ADF/KPSS/PP/variance-ratio,
+Engle-Granger/Johansen, GARCH, PCA/absorption ratio, OLS with HAC and diagnostics; cointegration pairs strategy;
+`quant analyze`), **S7 fundamentals** (point-in-time statements with period end *and* filing date from yfinance
+(estimated lag, flagged) or SEC EDGAR companyfacts (true dates); ratios on a shared basis, FCFF DCF with WACC and
+a sensitivity grid, comparables, cross-sectional quality/value/growth scores, earnings surprise and SUE;
+`quant fundamentals`). Next: S8 factors.
 
 ## Module map
 

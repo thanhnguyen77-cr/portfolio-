@@ -386,6 +386,34 @@ _DDL: tuple[str, ...] = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS fundamentals (
+        instrument_id VARCHAR NOT NULL,
+        statement VARCHAR NOT NULL,
+        item VARCHAR NOT NULL,
+        period_end DATE NOT NULL,
+        period_type VARCHAR NOT NULL,
+        value DOUBLE,
+        currency VARCHAR,
+        filed_at DATE NOT NULL,
+        filed_at_estimated BOOLEAN NOT NULL,
+        vendor VARCHAR NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (instrument_id, item, period_end, period_type, vendor)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS earnings (
+        instrument_id VARCHAR NOT NULL,
+        report_date DATE NOT NULL,
+        eps_estimate DOUBLE,
+        eps_actual DOUBLE,
+        currency VARCHAR,
+        vendor VARCHAR NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (instrument_id, report_date, vendor)
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS lineage (
         lineage_id VARCHAR PRIMARY KEY,
         ts TIMESTAMPTZ NOT NULL,
@@ -672,6 +700,83 @@ class DuckDBStore:
         )
         value = df["d"].iloc[0]
         return None if value is None or pd.isna(value) else pd.Timestamp(value).date()
+
+    # fundamentals ----------------------------------------------------------
+    def upsert_fundamentals(self, df: pd.DataFrame | None) -> int:
+        if df is None or df.empty:
+            return 0
+        rows = [
+            (
+                str(r.instrument_id),
+                str(r.statement),
+                str(r.item),
+                pd.Timestamp(r.period_end).date(),
+                str(r.period_type),
+                None if pd.isna(r.value) else float(r.value),
+                r.currency if isinstance(r.currency, str) else None,
+                pd.Timestamp(r.filed_at).date(),
+                bool(r.filed_at_estimated),
+                str(r.vendor),
+                pd.Timestamp(r.recorded_at).to_pydatetime(),
+            )
+            for r in df.itertuples(index=False)
+        ]
+        with self.write() as con:
+            con.executemany(
+                "INSERT OR REPLACE INTO fundamentals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+            )
+        return len(rows)
+
+    def load_fundamentals(
+        self, instrument_ids: Sequence[str], as_of: date | None = None, vendor: str | None = None
+    ) -> pd.DataFrame:
+        """Statement rows; with `as_of`, only rows filed at or before that date (point in time)."""
+        ids = list(instrument_ids)
+        if not ids:
+            return pd.DataFrame()
+        sql = f"SELECT * FROM fundamentals WHERE instrument_id IN ({', '.join('?' * len(ids))})"
+        params: list[Any] = list(ids)
+        if as_of is not None:
+            sql += " AND filed_at <= ?"
+            params.append(as_of)
+        if vendor:
+            sql += " AND vendor = ?"
+            params.append(vendor)
+        df = self.query(sql + " ORDER BY instrument_id, statement, item, period_end", params)
+        if not df.empty:
+            df["period_end"] = pd.to_datetime(df["period_end"]).dt.date
+            df["filed_at"] = pd.to_datetime(df["filed_at"]).dt.date
+        return df
+
+    def upsert_earnings(self, df: pd.DataFrame | None) -> int:
+        if df is None or df.empty:
+            return 0
+        rows = [
+            (
+                str(r.instrument_id),
+                pd.Timestamp(r.report_date).date(),
+                None if pd.isna(r.eps_estimate) else float(r.eps_estimate),
+                None if pd.isna(r.eps_actual) else float(r.eps_actual),
+                r.currency if isinstance(r.currency, str) else None,
+                str(r.vendor),
+                pd.Timestamp(r.recorded_at).to_pydatetime(),
+            )
+            for r in df.itertuples(index=False)
+        ]
+        with self.write() as con:
+            con.executemany("INSERT OR REPLACE INTO earnings VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def load_earnings(self, instrument_id: str, as_of: date | None = None) -> pd.DataFrame:
+        sql = "SELECT * FROM earnings WHERE instrument_id = ?"
+        params: list[Any] = [instrument_id]
+        if as_of is not None:
+            sql += " AND report_date <= ?"
+            params.append(as_of)
+        df = self.query(sql + " ORDER BY report_date", params)
+        if not df.empty:
+            df["report_date"] = pd.to_datetime(df["report_date"]).dt.date
+        return df
 
     # parquet view ----------------------------------------------------------
     def register_bars_view(self, parquet_root: Path | str, name: str = "bars", freq: str = "1d") -> bool:

@@ -14,9 +14,11 @@ Facts that shape this adapter:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import date, timedelta
+from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from quant.core.calendars import TradingCalendar, get_calendar
@@ -34,6 +36,7 @@ from quant.data.adapters.base import (
 )
 
 HistoryFn = Callable[[str, date, date, str], pd.DataFrame]
+FundamentalsFn = Callable[[str], Mapping[str, Any]]
 
 
 def default_history(symbol: str, start: date, end: date, interval: str) -> pd.DataFrame:
@@ -48,6 +51,23 @@ def default_history(symbol: str, start: date, end: date, interval: str) -> pd.Da
         actions=True,
         raise_errors=True,
     )
+
+
+def default_fundamentals(symbol: str) -> dict[str, Any]:
+    """The second network seam: statements, earnings dates and profile for one symbol."""
+    import yfinance as yf
+
+    t = yf.Ticker(symbol)
+    return {
+        "income": t.income_stmt,
+        "balance": t.balance_sheet,
+        "cashflow": t.cashflow,
+        "income_q": t.quarterly_income_stmt,
+        "balance_q": t.quarterly_balance_sheet,
+        "cashflow_q": t.quarterly_cashflow,
+        "earnings_dates": t.get_earnings_dates(limit=24),
+        "info": t.info,
+    }
 
 
 def _empty_actions() -> pd.DataFrame:
@@ -70,13 +90,100 @@ class YFinanceAdapter(BaseAdapter):
     )
     adjustment_state = AdjustmentState.SPLIT_ADJUSTED
 
-    def __init__(self, history_fn: HistoryFn | None = None, drop_unfinished_session: bool = True) -> None:
+    def __init__(
+        self,
+        history_fn: HistoryFn | None = None,
+        drop_unfinished_session: bool = True,
+        fundamentals_fn: FundamentalsFn | None = None,
+    ) -> None:
         super().__init__()
         self._history: HistoryFn = history_fn or default_history
+        self._fundamentals: FundamentalsFn = fundamentals_fn or default_fundamentals
         self.drop_unfinished_session = drop_unfinished_session
 
     def capabilities(self) -> frozenset[Capability]:
-        return frozenset({Capability.BARS_DAILY, Capability.CORPORATE_ACTIONS, Capability.FX})
+        return frozenset(
+            {
+                Capability.BARS_DAILY,
+                Capability.CORPORATE_ACTIONS,
+                Capability.FX,
+                Capability.FUNDAMENTALS,
+                Capability.EARNINGS,
+            }
+        )
+
+    # ------------------------------------------------------------------ fundamentals / earnings
+    def get_fundamentals(self, instruments: Sequence[Instrument]) -> AdapterResult:
+        from quant.fundamental.statements import from_yfinance
+
+        frames, errors, info = [], {}, {}
+        for inst in instruments:
+            try:
+                self._throttle()
+                raw = self._fundamentals(self.symbol_for(inst))
+                rows = from_yfinance(inst, raw)
+            except Exception as exc:  # noqa: BLE001
+                errors[inst.instrument_id] = f"{type(exc).__name__}: {str(exc)[:200]}"
+                continue
+            if rows.empty:
+                errors[inst.instrument_id] = "no statements returned"
+                continue
+            frames.append(rows)
+            info[inst.instrument_id] = dict(raw.get("info") or {})
+        frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        return AdapterResult(
+            vendor=self.name,
+            frame=frame,
+            errors=errors,
+            requested=[i.instrument_id for i in instruments],
+            params={"source": "yfinance statements; filing dates estimated"},
+            extras={"info": info},
+        )
+
+    def get_earnings(self, instruments: Sequence[Instrument]) -> AdapterResult:
+        frames, errors = [], {}
+        for inst in instruments:
+            try:
+                self._throttle()
+                raw = self._fundamentals(self.symbol_for(inst))
+                ed = raw.get("earnings_dates")
+                rows = self._parse_earnings(inst, ed)
+            except Exception as exc:  # noqa: BLE001
+                errors[inst.instrument_id] = f"{type(exc).__name__}: {str(exc)[:200]}"
+                continue
+            if rows.empty:
+                errors[inst.instrument_id] = "no earnings dates returned"
+                continue
+            frames.append(rows)
+        frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        return AdapterResult(
+            vendor=self.name, frame=frame, errors=errors, requested=[i.instrument_id for i in instruments]
+        )
+
+    def _parse_earnings(self, inst: Instrument, ed: pd.DataFrame | None) -> pd.DataFrame:
+        if ed is None or ed.empty:
+            return pd.DataFrame()
+        idx = pd.DatetimeIndex(ed.index)
+        dates = (idx.tz_localize(None) if idx.tz is not None else idx).normalize()
+        est = (
+            pd.to_numeric(ed.get("EPS Estimate"), errors="coerce") if "EPS Estimate" in ed.columns else np.nan
+        )
+        act = (
+            pd.to_numeric(ed.get("Reported EPS"), errors="coerce") if "Reported EPS" in ed.columns else np.nan
+        )
+        out = pd.DataFrame(
+            {
+                "instrument_id": inst.instrument_id,
+                "report_date": dates,
+                "eps_estimate": np.asarray(est, dtype="float64"),
+                "eps_actual": np.asarray(act, dtype="float64"),
+                "currency": inst.currency.value,
+                "vendor": self.name,
+                "recorded_at": pd.Timestamp(now()),
+            }
+        )
+        out = out.drop_duplicates("report_date", keep="last").sort_values("report_date")
+        return out.reset_index(drop=True)
 
     # ------------------------------------------------------------------ public API
     def get_bars(

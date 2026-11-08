@@ -85,10 +85,13 @@ class DataService:
         from quant.data.adapters.yfinance_adapter import YFinanceAdapter
 
         fred_key = self.settings.fred_api_key.get_secret_value() if self.settings.fred_api_key else None
+        from quant.data.adapters.sec_edgar import SECEdgarAdapter
+
         return {
             "yfinance": YFinanceAdapter(drop_unfinished_session=self.settings.data.drop_unfinished_session),
             "fred": FREDAdapter(api_key=fred_key),
             "boe": BankOfEnglandAdapter(),
+            "sec_edgar": SECEdgarAdapter(user_agent=self.settings.sec_user_agent),
         }
 
     def adapter_for(self, capability: Capability | str, vendor: str | None = None) -> MarketDataAdapter:
@@ -351,6 +354,97 @@ class DataService:
                     self.fetch_macro([series_id], last + timedelta(days=1), end_d, vendor_name)
         df = self.db.load_macro(series_id, vendor_name, start_d, end_d)
         return pd.Series(df["value"].to_numpy(), index=pd.DatetimeIndex(df["date"]), name=series_id)
+
+    # ------------------------------------------------------------------ fundamentals & earnings
+    def fetch_fundamentals(
+        self, instruments: Sequence[Instrument | str], vendor: str | None = None
+    ) -> FetchReport:
+        insts = [self.resolve(i) for i in instruments]
+        adapter = self.adapter_for(Capability.FUNDAMENTALS, vendor)
+        result = adapter.get_fundamentals(insts)
+        rows = self.db.upsert_fundamentals(result.frame)
+        record = LineageRecord(
+            vendor=adapter.name,
+            operation="fetch_fundamentals",
+            instrument_ids=result.requested,
+            params=dict(result.params),
+            rows=rows,
+            diff={"errors": result.errors},
+        )
+        self.lineage.record(record)
+        return FetchReport(
+            vendor=adapter.name,
+            start=today(),
+            end=today(),
+            requested=result.requested,
+            rows=rows,
+            errors=result.errors,
+            lineage_id=record.lineage_id,
+        )
+
+    def get_fundamentals(
+        self,
+        instrument: Instrument | str,
+        *,
+        as_of: date | str | None = None,
+        vendor: str | None = None,
+        refresh: bool | None = None,
+    ):  # noqa: ANN201 - StatementSet
+        """Point-in-time statements from the cache (fetching once when empty unless refresh=False)."""
+        from quant.fundamental.statements import StatementSet
+
+        inst = self.resolve(instrument)
+        rows = self.db.load_fundamentals([inst.instrument_id], vendor=vendor)
+        if (rows.empty and refresh is not False) or refresh:
+            self.fetch_fundamentals([inst], vendor=vendor)
+            rows = self.db.load_fundamentals([inst.instrument_id], vendor=vendor)
+        return StatementSet.from_rows(rows, inst.instrument_id).as_of(as_of)
+
+    def fetch_earnings(
+        self, instruments: Sequence[Instrument | str], vendor: str | None = None
+    ) -> FetchReport:
+        insts = [self.resolve(i) for i in instruments]
+        adapter = self.adapter_for(Capability.EARNINGS, vendor)
+        result = adapter.get_earnings(insts)
+        rows = self.db.upsert_earnings(result.frame)
+        record = LineageRecord(
+            vendor=adapter.name,
+            operation="fetch_earnings",
+            instrument_ids=result.requested,
+            rows=rows,
+            diff={"errors": result.errors},
+        )
+        self.lineage.record(record)
+        return FetchReport(
+            vendor=adapter.name,
+            start=today(),
+            end=today(),
+            requested=result.requested,
+            rows=rows,
+            errors=result.errors,
+            lineage_id=record.lineage_id,
+        )
+
+    def get_earnings(
+        self, instrument: Instrument | str, *, as_of: date | None = None, refresh: bool | None = None
+    ) -> pd.DataFrame:
+        inst = self.resolve(instrument)
+        rows = self.db.load_earnings(inst.instrument_id, as_of=as_of)
+        if (rows.empty and refresh is not False) or refresh:
+            self.fetch_earnings([inst])
+            rows = self.db.load_earnings(inst.instrument_id, as_of=as_of)
+        return rows
+
+    def last_close(self, instrument: Instrument | str, as_of: date | str | None = None) -> float | None:
+        """Latest cached close at or before `as_of` (no fetching)."""
+        inst = self.resolve(instrument)
+        adapter = self.adapter_for(Capability.BARS_DAILY)
+        series = self.parquet.read_series(inst.instrument_id, adapter.name, self.freq)
+        if series.empty:
+            return None
+        if as_of is not None:
+            series = series[series["session_date"] <= pd.Timestamp(to_date(as_of))]
+        return None if series.empty else float(series["close"].iloc[-1])
 
     # ------------------------------------------------------------------ universes
     def universe(self, name: str) -> PITUniverse:

@@ -135,6 +135,10 @@ class MarketDataAdapter(Protocol):
 
     def get_macro_series(self, series_ids: Sequence[str], start: date, end: date) -> AdapterResult: ...
 
+    def get_fundamentals(self, instruments: Sequence[Instrument]) -> AdapterResult: ...
+
+    def get_earnings(self, instruments: Sequence[Instrument]) -> AdapterResult: ...
+
     def __enter__(self) -> MarketDataAdapter: ...
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None: ...
@@ -185,6 +189,12 @@ class BaseAdapter:
 
     def get_macro_series(self, series_ids: Sequence[str], start: date, end: date) -> AdapterResult:
         raise self._unsupported(Capability.MACRO)
+
+    def get_fundamentals(self, instruments: Sequence[Instrument]) -> AdapterResult:
+        raise self._unsupported(Capability.FUNDAMENTALS)
+
+    def get_earnings(self, instruments: Sequence[Instrument]) -> AdapterResult:
+        raise self._unsupported(Capability.EARNINGS)
 
     def __enter__(self) -> BaseAdapter:
         return self

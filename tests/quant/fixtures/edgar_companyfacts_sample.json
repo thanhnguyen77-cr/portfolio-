@@ -1,0 +1,38 @@
+{"cik": 999999, "entityName": "Sample Corp", "facts": {"us-gaap": {
+ "Revenues": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 1000.0, "accn": "a1", "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023"},
+   {"end": "2024-03-31", "val": 260.0, "accn": "a2", "fy": 2024, "fp": "Q1", "form": "10-Q", "filed": "2024-05-03", "frame": "CY2024Q1"},
+   {"end": "2024-06-30", "val": 540.0, "accn": "a3", "fy": 2024, "fp": "Q2", "form": "10-Q", "filed": "2024-08-02"},
+   {"end": "2024-06-30", "val": 280.0, "accn": "a3", "fy": 2024, "fp": "Q2", "form": "10-Q", "filed": "2024-08-02", "frame": "CY2024Q2"}
+ ]}},
+ "CostOfRevenue": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 600.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023"}
+ ]}},
+ "OperatingIncomeLoss": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 200.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023"}
+ ]}},
+ "NetIncomeLoss": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 150.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023"},
+   {"end": "2024-03-31", "val": 40.0, "fy": 2024, "fp": "Q1", "form": "10-Q", "filed": "2024-05-03", "frame": "CY2024Q1"}
+ ]}},
+ "Assets": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 2000.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023Q4I"},
+   {"end": "2024-03-31", "val": 2100.0, "fy": 2024, "fp": "Q1", "form": "10-Q", "filed": "2024-05-03", "frame": "CY2024Q1I"}
+ ]}},
+ "StockholdersEquity": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 1200.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15"}
+ ]}},
+ "LongTermDebtNoncurrent": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 300.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15"}
+ ]}},
+ "DebtCurrent": {"units": {"USD": [
+   {"end": "2023-12-31", "val": 50.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15"}
+ ]}},
+ "CommonStockSharesOutstanding": {"units": {"shares": [
+   {"end": "2023-12-31", "val": 100.0, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15"}
+ ]}},
+ "EarningsPerShareDiluted": {"units": {"USD/shares": [
+   {"end": "2023-12-31", "val": 1.5, "fy": 2023, "fp": "FY", "form": "10-K", "filed": "2024-02-15", "frame": "CY2023"}
+ ]}},
+ "SomethingElse": {"units": {"USD": [{"end": "2023-12-31", "val": 1.0, "form": "8-K", "filed": "2024-01-01"}]}}
+}}}

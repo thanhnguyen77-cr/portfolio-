@@ -219,6 +219,12 @@ class FakeBarsAdapter:
     def get_macro_series(self, series_ids, start, end):
         raise NotImplementedError
 
+    def get_fundamentals(self, instruments):
+        raise NotImplementedError
+
+    def get_earnings(self, instruments):
+        raise NotImplementedError
+
     def __enter__(self):
         return self
 
@@ -330,6 +336,12 @@ class FakeMacroAdapter:
     def get_corporate_actions(self, instruments, start, end):
         raise NotImplementedError
 
+    def get_fundamentals(self, instruments):
+        raise NotImplementedError
+
+    def get_earnings(self, instruments):
+        raise NotImplementedError
+
     def __enter__(self):
         return self
 
@@ -387,3 +399,172 @@ class ScheduleStrategy:
 
     def describe(self):
         return {"name": self.name, "instruments": self.instruments, "params": {}}
+
+
+# --------------------------------------------------------------------------- S7: fundamentals helpers
+
+
+def yf_statement_frames(scale: float = 1.0):
+    """yfinance-style annual + quarterly statement frames (rows = line items, columns = period ends)."""
+    import pandas as pd
+
+    annual_cols = pd.to_datetime(["2023-12-31", "2022-12-31", "2021-12-31"])
+    income = (
+        pd.DataFrame(
+            {
+                "Total Revenue": [1000.0, 900.0, 800.0],
+                "Cost Of Revenue": [600.0, 550.0, 500.0],
+                "Operating Income": [200.0, 170.0, 150.0],
+                "Interest Expense": [10.0, 10.0, 10.0],
+                "Pretax Income": [190.0, 160.0, 140.0],
+                "Tax Provision": [40.0, 32.0, 28.0],
+                "Net Income": [150.0, 128.0, 112.0],
+                "Diluted EPS": [1.5, 1.28, 1.12],
+                "Diluted Average Shares": [100.0, 100.0, 100.0],
+            },
+            index=annual_cols,
+        ).T
+        * scale
+    )
+    income.loc["Diluted EPS"] /= scale
+    income.loc["Diluted Average Shares"] /= scale
+    balance = (
+        pd.DataFrame(
+            {
+                "Total Assets": [2000.0, 1800.0, 1700.0],
+                "Current Assets": [600.0, 550.0, 500.0],
+                "Cash And Cash Equivalents": [200.0, 150.0, 100.0],
+                "Current Liabilities": [300.0, 280.0, 260.0],
+                "Total Debt": [400.0, 420.0, 450.0],
+                "Stockholders Equity": [1200.0, 1100.0, 1000.0],
+                "Ordinary Shares Number": [100.0, 100.0, 100.0],
+            },
+            index=annual_cols,
+        ).T
+        * scale
+    )
+    balance.loc["Ordinary Shares Number"] /= scale
+    cashflow = (
+        pd.DataFrame(
+            {
+                "Operating Cash Flow": [220.0, 200.0, 180.0],
+                "Capital Expenditure": [-70.0, -60.0, -50.0],
+                "Depreciation And Amortization": [50.0, 45.0, 40.0],
+                "Cash Dividends Paid": [-30.0, -25.0, -20.0],
+            },
+            index=annual_cols,
+        ).T
+        * scale
+    )
+    q_cols = pd.to_datetime(["2024-06-30", "2024-03-31", "2023-12-31", "2023-09-30", "2023-06-30"])
+    income_q = (
+        pd.DataFrame(
+            {
+                "Total Revenue": [280.0, 260.0, 255.0, 250.0, 245.0],
+                "Net Income": [45.0, 40.0, 38.0, 37.0, 36.0],
+                "Operating Income": [60.0, 52.0, 50.0, 49.0, 48.0],
+            },
+            index=q_cols,
+        ).T
+        * scale
+    )
+    balance_q = (
+        pd.DataFrame(
+            {
+                "Total Assets": [2150.0, 2100.0, 2000.0, 1950.0, 1900.0],
+                "Stockholders Equity": [1260.0, 1230.0, 1200.0, 1170.0, 1140.0],
+                "Total Debt": [390.0, 395.0, 400.0, 405.0, 410.0],
+                "Cash And Cash Equivalents": [210.0, 205.0, 200.0, 190.0, 180.0],
+                "Ordinary Shares Number": [100.0] * 5,
+            },
+            index=q_cols,
+        ).T
+        * scale
+    )
+    balance_q.loc["Ordinary Shares Number"] /= scale
+    cashflow_q = (
+        pd.DataFrame(
+            {
+                "Operating Cash Flow": [60.0, 55.0, 56.0, 54.0, 52.0],
+                "Capital Expenditure": [-20.0, -18.0, -17.0, -16.0, -15.0],
+                "Depreciation And Amortization": [13.0, 13.0, 12.0, 12.0, 12.0],
+            },
+            index=q_cols,
+        ).T
+        * scale
+    )
+    earnings_dates = pd.DataFrame(
+        {
+            "EPS Estimate": [0.40, 0.38, 0.36, 0.35, 0.44],
+            "Reported EPS": [0.45, 0.40, 0.38, 0.37, None],
+            "Surprise(%)": [12.5, 5.3, 5.6, 5.7, None],
+        },
+        index=pd.DatetimeIndex(
+            pd.to_datetime(["2024-07-25", "2024-04-25", "2024-01-25", "2023-10-26", "2024-10-24"]),
+            name="Earnings Date",
+        ).tz_localize("America/New_York"),
+    )
+    return {
+        "income": income,
+        "balance": balance,
+        "cashflow": cashflow,
+        "income_q": income_q,
+        "balance_q": balance_q,
+        "cashflow_q": cashflow_q,
+        "earnings_dates": earnings_dates,
+        "info": {"sector": "Technology"},
+    }
+
+
+class FakeFundamentalsAdapter:
+    """Serves statements and earnings from a {symbol: frames} map via the real yfinance normaliser."""
+
+    name = "fakefund"
+    identifier_key = "yahoo"
+
+    def __init__(self, frames_by_symbol: dict):
+        from quant.data.adapters.base import FieldMap, RateLimit
+
+        self.frames = frames_by_symbol
+        self.calls: list[str] = []
+        self.rate_limit = RateLimit()
+        self.field_map = FieldMap()
+
+    def capabilities(self):
+        from quant.data.adapters.base import Capability
+
+        return frozenset({Capability.FUNDAMENTALS, Capability.EARNINGS})
+
+    def _inner(self):
+        from quant.data.adapters.yfinance_adapter import YFinanceAdapter
+
+        def fn(symbol):
+            self.calls.append(symbol)
+            if symbol not in self.frames:
+                raise KeyError(symbol)
+            return self.frames[symbol]
+
+        a = YFinanceAdapter(history_fn=lambda *a: None, fundamentals_fn=fn)
+        a.name = self.name
+        return a
+
+    def get_fundamentals(self, instruments):
+        return self._inner().get_fundamentals(instruments)
+
+    def get_earnings(self, instruments):
+        return self._inner().get_earnings(instruments)
+
+    def get_bars(self, instruments, start, end, freq="1d"):
+        raise NotImplementedError
+
+    def get_corporate_actions(self, instruments, start, end):
+        raise NotImplementedError
+
+    def get_macro_series(self, series_ids, start, end):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return None

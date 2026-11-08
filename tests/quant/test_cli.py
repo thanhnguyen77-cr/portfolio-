@@ -216,3 +216,60 @@ def test_analyze_commands_on_cached_bars(monkeypatch, tmp_path):
         assert needle in res.output, (args, res.output)
     missing = runner.invoke(app, ["analyze", "indicators", "XOM", *common])
     assert missing.exit_code == 1 and "no bars" in missing.output
+
+
+def test_fundamentals_commands_on_cached_data(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars, yf_statement_frames
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import DuckDBStore, ParquetStore
+    from quant.fundamental import from_yfinance
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    db = DuckDBStore(tmp_path / "data" / "quant.duckdb")
+    db.migrate()
+    db.upsert_fundamentals(from_yfinance(cat["XNAS_AAPL"], yf_statement_frames()))
+    db.upsert_fundamentals(from_yfinance(cat["XNYS_JPM"], yf_statement_frames(scale=2.0)))
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    store.write_bars(
+        make_bars(cat["XNAS_AAPL"], date(2024, 1, 2), date(2024, 8, 30), seed=1, vendor="yfinance")
+    )
+    ed = yf_statement_frames()["earnings_dates"]
+    import pandas as pd
+
+    from quant.core.time import now
+
+    db.upsert_earnings(
+        pd.DataFrame(
+            {
+                "instrument_id": "XNAS_AAPL",
+                "report_date": ed.index.tz_localize(None).normalize(),
+                "eps_estimate": ed["EPS Estimate"].to_numpy(dtype=float),
+                "eps_actual": pd.to_numeric(ed["Reported EPS"]).to_numpy(dtype=float),
+                "currency": "USD",
+                "vendor": "yfinance",
+                "recorded_at": pd.Timestamp(now()),
+            }
+        )
+    )
+    r = runner.invoke(app, ["fundamentals", "ratios", "AAPL", "--as-of", "2024-08-30"])
+    assert r.exit_code == 0, r.output
+    assert "roic" in r.output and "pe" in r.output
+    d = runner.invoke(app, ["fundamentals", "dcf", "AAPL", "--rate", "0.09", "--as-of", "2024-08-30"])
+    assert d.exit_code == 0, d.output
+    assert "per_share" in d.output and "terminal growth" in d.output
+    s = runner.invoke(app, ["fundamentals", "scores", "AAPL", "JPM", "--as-of", "2024-08-30"])
+    assert s.exit_code == 0, s.output
+    assert "composite" in s.output
+    e = runner.invoke(app, ["fundamentals", "earnings", "AAPL"])
+    assert e.exit_code == 0, e.output
+    assert "beat_rate" in e.output
+    missing = runner.invoke(app, ["fundamentals", "ratios", "VOD.L"])
+    assert missing.exit_code == 1 and "no cached statements" in missing.output
+    blocked = runner.invoke(app, ["fundamentals", "fetch", "XOM"])
+    assert blocked.exit_code == 1 and "blocked" in blocked.output
