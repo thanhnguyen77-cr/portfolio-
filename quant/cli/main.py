@@ -11,6 +11,7 @@ from quant import __version__
 from quant.cli.analyze_cmd import analyze_app
 from quant.cli.backtest_cmd import backtest_app
 from quant.cli.data_cmd import data_app
+from quant.cli.demo_cmd import demo
 from quant.cli.factors_cmd import factors_app
 from quant.cli.fundamentals_cmd import fundamentals_app
 from quant.cli.macro_cmd import macro_app
@@ -55,6 +56,7 @@ app.add_typer(risk_app, name="risk")
 app.add_typer(paper_app, name="paper")
 app.add_typer(universe_app, name="universe")
 app.command("screen")(screen)
+app.command("demo")(demo)
 
 
 if __name__ == "__main__":  # pragma: no cover

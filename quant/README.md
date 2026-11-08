@@ -18,6 +18,7 @@ simulated paper broker.
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev,yfinance]"        # add alpaca / polygon / tiingo / ndl / fred extras as needed
 quant version
+quant demo --out data/reports/demo       # OFFLINE end-to-end run on SYNTHETIC data; open index.html
 quant config                             # effective settings, secrets masked
 quant data instruments --market XLON     # the seed catalogue
 quant data fetch AAPL VOD.L --start 2020-01-01   # daily bars into the local Parquet/DuckDB cache
@@ -65,7 +66,11 @@ quant data adapters                                              # configured, k
 quant data fetch AAPL --vendor stooq                             # key-free fallback for daily bars
 quant data filings AAPL --forms 10-K,10-Q --since 2023-01-01     # EDGAR submissions (QUANT_SEC_USER_AGENT)
 quant data filings VOD --vendor companies_house                  # UK filing history (QUANT_COMPANIES_HOUSE_API_KEY)
+quant backtest run factor_tilt --universe ftse100 --start 2020-01-01 --base GBP --param top_fraction=0.3
+quant backtest run macro_regime_switch -i AAPL,MSFT,SPX,VIX --param benchmark=XNYS_SPX --param vol_index=XNYS_VIX
 ```
+
+The `examples/` scripts show the same pipeline through the Python API on real data (network needed).
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
 → `.env` → environment variables (`QUANT_TRADING__BASE_CURRENCY=GBP`, `QUANT_FRED_API_KEY=…`). API keys are
@@ -75,56 +80,53 @@ only ever read from the environment or `.env`, never from YAML.
 
 ```bash
 pytest tests/quant -q          # no network: sockets, requests and yfinance are blocked by conftest.py
-pytest -m live tests/quant     # opt-in smoke tests against real endpoints (never run in CI)
-ruff check quant tests/quant
+pytest -m live tests/quant     # opt-in: one small request each to yfinance, FRED and BoE (never run in CI)
+ruff check quant tests/quant && ruff format --check quant tests/quant
+quant demo --out /tmp/demo     # the offline end-to-end run; exits 1 if any stage fails
 ```
+
+What the suite does and does not establish: the tests pin behaviour to analytic results (buy-and-hold
+returns, mean-variance solutions, VaR closed forms, Kelly fractions), to planted anomalies (gaps, outliers,
+splits, denomination changes, look-ahead poison), and to internal consistency (SimBroker fills equal engine
+fills; the vectorised rebalance equals the engine; ledger cash and positions re-derive from the event log;
+every adapter honours the contract). They do **not** establish that any vendor still serves the formats the
+fixtures were recorded from (that is what the opt-in live tests are for), that any strategy earns money, or
+that the code is free of errors. The live smoke tests could not be executed from the environment this was
+built in: outbound HTTP to the vendor hosts is blocked there, so they are untested against the real
+endpoints at the time of writing.
 
 ## Status
 
-Built in tested stages; see the repository history. Each stage's status note states what passed, what was
-skipped and known gaps. Completed: **S0 scaffold**, **S1 data core** (adapter contract, yfinance adapter,
-Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`), **S2 data quality**
-(validation report with grades, corporate actions and as-of adjustment, FX with forward-fill-only alignment,
-FRED and Bank of England macro series), **S3 backtest engine** (event-driven, multi-currency, next-open fills,
-itemised costs incl. UK/US transaction taxes, look-ahead guards), **S4 universes** (Wikipedia constituents with
-shape checks, point-in-time membership with snapshot accumulation and S&P change-table reconstruction,
-coverage, evidence-based screen, HTML report builder), **S5 robustness** (walk-forward, parameter sensitivity,
-block-bootstrap Sharpe interval, deflated Sharpe ratio fed by a per-process variant counter, tearsheet with
-light/dark charts and table views, cross-sectional momentum, `quant backtest run`). **S6 technical + stats** (Wilder RSI/ATR, MACD, ADX, stochastic, Bollinger/Keltner, OBV/VWAP/MFI, pivot
-support/resistance, volatility, trend, rule-based and Markov-switching regimes; ADF/KPSS/PP/variance-ratio,
-Engle-Granger/Johansen, GARCH, PCA/absorption ratio, OLS with HAC and diagnostics; cointegration pairs strategy;
-`quant analyze`), **S7 fundamentals** (point-in-time statements with period end *and* filing date from yfinance
-(estimated lag, flagged) or SEC EDGAR companyfacts (true dates); ratios on a shared basis, FCFF DCF with WACC and
-a sensitivity grid, comparables, cross-sectional quality/value/growth scores, earnings surprise and SUE;
-`quant fundamentals`), **S8 factors** (12-1 momentum, low-vol, size, point-in-time value and quality
-characteristics; rank-normalisation with optional sector neutrality; dollar-neutral quantile long-short factor
-returns with drift between monthly rebalances; HAC exposures with injectable risk-free rate; exact arithmetic
-attribution; Ken French loader; `quant factors`), **S9 macro** (ONS time-series adapter; a catalogue of
-US and UK series with per-series `verified` flags, several UK BoE/ONS ids still unverified against the live
-APIs; yield-curve slope, curvature, inversion flags and tenor snapshots; inflation transforms and a
-rule-based regime label; a growth x inflation quadrant and cross-asset board that lists missing inputs
-rather than imputing them; `quant macro`), **S10 portfolio** (sample / EWMA / Ledoit-Wolf covariance with
-PSD repair; SLSQP mean-variance with box, budget, gross and group constraints and reported binding
-constraints; min-variance, max-Sharpe, target-return, target-risk and the efficient frontier; risk parity in
-Spinu's convex form plus a bounded fallback; Black-Litterman with absolute and relative views; HRP; ex-ante
-and realised vol targeting with lagged leverage; fractional-Kelly sizing with Wilson shrinkage and ordered
-caps; a vectorised periodic rebalance pinned to the engine by an equivalence test; `FixedWeights` strategy;
-`quant optimize`), **S11 risk** (historical, normal, Student-t, Cornish-Fisher, GARCH filtered-historical and
-Monte Carlo VaR/CVaR with a Kupiec backtest of out-of-sample rolling VaR; dated stress windows from the GFC to
-the 2022 gilt crisis with coverage reported, hypothetical and beta shocks, factor scenarios from estimated
-betas; calm-versus-stress correlation breakdown, diversification and absorption ratios; drawdown episodes,
-ulcer/pain indices, CDaR; an HTML risk report; `quant risk`), **S12 paper trading** (Broker protocol; a
-multi-currency SimBroker that re-uses the engine's fill rules and cost model and is pinned to the engine by a
-fill-for-fill equivalence test; a DuckDB ledger whose cash and positions are re-derivable from the event log;
-a pre-trade gate ported from the plugin's rule list; a daily runner that replays missed sessions, lets the
-strategy decide on data up to the close, gates and submits orders and reconciles; an HTML blotter; an Alpaca
-adapter that refuses `paper=False`; `quant paper`), **S13 adapters** (Stooq, Alpaca market data, Polygon
-aggregates + reference dividends/splits, Tiingo prices with embedded actions, Nasdaq Data Link datasets as
-macro series, Companies House filing history, EDGAR submissions filings index; keyed vendors register only
-when their credentials are set; Bloomberg / Refinitiv / FactSet / Capital IQ stubs that declare their
-intended capabilities, advertise none until wired, and raise with concrete steps; a crypto helper module
-for 24/7 series; one contract test over every adapter; `quant data adapters|filings`). Next: S14 docs and
-end-to-end demo.
+All fourteen planned stages are implemented, each with tests that passed at commit time (see the repository
+history for the per-stage notes). Completed: **S0 scaffold**, **S1 data core** (adapter contract, yfinance
+adapter, Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`), **S2 data
+quality** (validation report with grades, corporate actions and as-of adjustment, FX with forward-fill-only
+alignment, FRED and Bank of England macro series), **S3 backtest engine** (event-driven, multi-currency,
+next-open fills, itemised costs incl. UK/US transaction taxes, look-ahead guards), **S4 universes**
+(Wikipedia constituents with shape checks, point-in-time membership with snapshot accumulation and S&P
+change-table reconstruction, coverage, evidence-based screen, HTML report builder), **S5 robustness**
+(walk-forward, parameter sensitivity, block-bootstrap Sharpe interval, deflated Sharpe ratio fed by a
+per-process variant counter, tearsheet with light/dark charts and table views, cross-sectional momentum),
+**S6 technical + stats** (indicators, support/resistance, rule-based and Markov regimes; stationarity,
+cointegration, GARCH, PCA, OLS diagnostics; pairs strategy), **S7 fundamentals** (point-in-time statements
+with period end *and* filing date, ratios on a shared basis, DCF with sensitivity, comparables, scores,
+earnings surprise), **S8 factors** (characteristics, rank normalisation, long-short factor returns, HAC
+exposures, exact attribution, Ken French loader), **S9 macro** (ONS adapter, series catalogue with
+`verified` flags, yield curve, inflation, cross-asset board), **S10 portfolio** (covariance estimators,
+mean-variance family, risk parity, Black-Litterman, HRP, vol targeting, Kelly sizing, vectorised rebalance
+pinned to the engine), **S11 risk** (VaR/CVaR family with Kupiec backtest, dated stress windows, factor
+scenarios, correlation breakdown, drawdown analytics, risk report), **S12 paper trading** (SimBroker pinned
+to the engine fill for fill, DuckDB ledger with re-derivable invariants, pre-trade gate, daily runner,
+reconciliation, blotter, paper-only Alpaca adapter), **S13 adapters** (Stooq, Alpaca data, Polygon, Tiingo,
+Nasdaq Data Link, Companies House, EDGAR filings; licensed stubs; crypto helpers; one contract test over
+every adapter), **S14 docs + end-to-end** (`FactorTilt` and `MacroRegimeSwitch` strategies, `quant demo` on
+a synthetic mini-dataset exercising every stage offline, examples, a `--help` smoke test over every CLI
+command, this status).
+
+Honest summary of where it stands: the research, backtesting and paper-trading pipeline runs end to end
+offline and is covered by 400-odd tests; the live vendor endpoints have been exercised only through
+recorded fixtures in this build environment; several UK macro series ids and some fee-table entries are
+still marked unverified; and nothing here has been shown to make money, because that was never the claim.
 
 ## Module map
 
@@ -144,12 +146,51 @@ end-to-end demo.
 | `quant.backtest` | event-driven multi-currency engine, orders/fills, costs, metrics, robustness analysis |
 | `quant.paper` | broker protocol, SimBroker, Alpaca paper adapter, pre-trade gate, ledger, daily runner |
 | `quant.reports` | self-contained HTML reports |
+| `quant.crypto` | 24/7 series helpers: 365-day annualisation, alignment onto exchange calendars, caveats |
+| `quant.demo` | synthetic mini-dataset and the offline end-to-end `quant demo` |
 | `quant.cli` | the `quant` command |
 
-## Known limitations (kept current as stages land)
+## Known limitations
 
-- Daily bars only. Intraday is supported by the storage schema but not by the backtester.
-- Free data sources give **approximate** point-in-time universes. FTSE 100/250 history is `current_only`
-  until snapshots accumulate; every backtest reports its survivorship coverage.
-- Transaction taxes and levies are modelled from a date-effective table (`quant/config/fees.yaml`); entries
-  marked `verified: false` have not yet been checked against the primary source.
+**Scope**
+- Research, backtesting and paper trading only. No live broker exists; the live gate always raises.
+- Daily bars only. Intraday is supported by the storage schema but not by the backtester or the broker.
+- Long/short with a flat borrow-cost rate; no options; continuous futures come from vendor `=F` series
+  without roll modelling, so their long-run returns carry roll gaps.
+
+**Data**
+- Free sources give **approximate** point-in-time universes. S&P 500 history is reconstructed from the
+  Wikipedia changes table (irregular before ~2008 and dependent on that page's shape); FTSE 100/250 are
+  `current_only` until snapshots accumulate. Every backtest reports its survivorship coverage.
+- Yahoo closes are split-adjusted but not dividend-adjusted and are stored as such; dividend currencies for
+  UK payers that declare in USD are a known soft spot, flagged by validation rather than resolved.
+- Vendor response formats are pinned by recorded fixtures. The opt-in live tests (`pytest -m live`) check
+  three endpoints; they could not be run from the environment this was built in, so a vendor format change
+  since the fixtures were recorded would show up only when you run them.
+- Several UK macro series ids in `quant/macro/catalog.py` carry `verified: false`; the Companies House
+  adapter indexes filings but does not parse iXBRL accounts; Nasdaq Data Link anonymous quotas are small.
+- FX conversion uses the vendor's ~17:00 New York daily fix for London 16:30 closes (documented in
+  `quant/data/fx.py`); it is forward-filled, never backfilled.
+- Fee and levy rates live in `quant/config/fees.yaml` with `verified` flags; the PTM levy increase and the
+  SEC Section 31 rate are seeded from memory and need checking against the primary sources before use.
+- Licensed vendors (Bloomberg, Refinitiv, FactSet, Capital IQ) are stubs that document the wiring and raise.
+
+**Models**
+- Covariance, VaR and stress numbers describe the sample they were estimated from; parametric and
+  simulation VaR assume iid returns and scale with the square root of time.
+- Expected returns fed to the optimiser default to shrunk historical means, which is a weak input the
+  optimiser amplifies; the result reports binding constraints for that reason.
+- Conditioning correlations on a portfolio's own worst days is biased; the breakdown says so in its output.
+- The deflated Sharpe ratio counts variants per process, not across your research history.
+
+**Execution**
+- SimBroker fills are the engine's idealised fills (next session open, participation cap, half-spread and
+  slippage from the cost model); queue position, halts, odd lots and venue outages are not modelled.
+- The broker rejects an unaffordable buy at submission, whereas the engine trims it at fill: the two agree
+  only while orders are affordable, which the equivalence test guarantees by construction.
+- The Alpaca adapter has been exercised only against a fake client; it has not been run against Alpaca's
+  paper API from this environment.
+
+**Demo**
+- `quant demo` runs on SYNTHETIC data generated from a seeded factor model. Its reports show that the
+  pipeline works, not what any market did.

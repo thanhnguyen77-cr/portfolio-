@@ -20,6 +20,8 @@ STRATEGIES: dict[str, str] = {
     "trend_following": "quant.strategies:TrendFollowing",
     "xs_momentum": "quant.strategies:CrossSectionalMomentum",
     "pairs_cointegration": "quant.strategies:PairsCointegration",
+    "factor_tilt": "quant.strategies:FactorTilt",
+    "macro_regime_switch": "quant.strategies:MacroRegimeSwitch",
 }
 
 
