@@ -629,3 +629,22 @@ def test_paper_commands_on_cached_data(monkeypatch, tmp_path):
     assert r.exit_code == 0 and (tmp_path / "b2.html").exists()
     r = runner.invoke(app, ["paper", "live"])
     assert r.exit_code == 2 and "disabled" in r.output
+
+
+def test_data_adapters_inventory_and_filings_cli(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "220")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.delenv("QUANT_POLYGON_API_KEY", raising=False)
+    r = runner.invoke(app, ["data", "adapters"])
+    assert r.exit_code == 0, r.output
+    for name in ("yfinance", "stooq", "ndl", "polygon", "bloomberg", "capiq"):
+        assert name in r.output
+    assert "QUANT_POLYGON_API_KEY" in r.output and "licensed stub" in r.output
+    monkeypatch.setenv("QUANT_POLYGON_API_KEY", "k")
+    r2 = runner.invoke(app, ["data", "adapters"])
+    assert r2.exit_code == 0 and "set QUANT_POLYGON_API_KEY" not in r2.output
+    # filings without an EDGAR user agent fails loudly, never silently
+    monkeypatch.delenv("QUANT_SEC_USER_AGENT", raising=False)
+    r3 = runner.invoke(app, ["data", "filings", "AAPL"])
+    assert r3.exit_code != 0

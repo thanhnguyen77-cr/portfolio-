@@ -1,0 +1,5 @@
+[
+ {"date": "2024-07-01T00:00:00.000Z", "close": 216.75, "high": 217.51, "low": 211.92, "open": 212.09, "volume": 60402900, "adjClose": 216.5, "adjHigh": 217.3, "adjLow": 211.7, "adjOpen": 211.9, "adjVolume": 60402900, "divCash": 0.0, "splitFactor": 1.0},
+ {"date": "2024-07-02T00:00:00.000Z", "close": 220.27, "high": 220.38, "low": 215.1, "open": 216.15, "volume": 58046200, "adjClose": 220.0, "adjHigh": 220.1, "adjLow": 214.9, "adjOpen": 215.9, "adjVolume": 58046200, "divCash": 0.25, "splitFactor": 1.0},
+ {"date": "2024-07-03T00:00:00.000Z", "close": 221.55, "high": 221.55, "low": 219.03, "open": 220.0, "volume": 37369800, "adjClose": 221.3, "adjHigh": 221.3, "adjLow": 218.8, "adjOpen": 219.8, "adjVolume": 37369800, "divCash": 0.0, "splitFactor": 4.0}
+]

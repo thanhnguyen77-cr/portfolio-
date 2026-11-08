@@ -168,3 +168,36 @@ def lineage(
         return
     cols = ["ts", "vendor", "operation", "rows", "instrument_ids", "sha256"]
     console.print(frame_table(df[cols], max_rows=limit))
+
+
+@data_app.command("adapters")
+def adapters(config_file: ConfigOption = None) -> None:
+    """List data adapters: configured ones, keyed ones awaiting credentials, and licensed stubs."""
+    svc = _service(config_file)
+    console.print(frame_table(svc.adapter_inventory(), title="data adapters", max_rows=100))
+    console.print(
+        "[yellow]Licensed stubs raise AdapterNotConfigured with wiring steps; they are never selected "
+        "automatically.[/yellow]"
+    )
+
+
+@data_app.command("filings")
+def filings(
+    refs: Annotated[list[str], typer.Argument(help="Instrument ids or symbols.")],
+    vendor: Annotated[
+        str | None, typer.Option("--vendor", help="sec_edgar | companies_house (auto).")
+    ] = None,
+    forms: Annotated[str | None, typer.Option("--forms", help="Comma-separated forms / categories.")] = None,
+    since: Annotated[str | None, typer.Option("--since")] = None,
+    config_file: ConfigOption = None,
+) -> None:
+    """Filings index with true filing dates (EDGAR submissions for US names, Companies House for UK)."""
+    svc = _service(config_file)
+    frame = svc.filings(
+        refs, vendor=vendor, forms=[f.strip() for f in forms.split(",")] if forms else None, since=since
+    )
+    if frame.empty:
+        console.print("[yellow]no filings returned[/yellow]")
+        raise typer.Exit(code=1)
+    show = frame[["instrument_id", "filed_at", "period_end", "form", "category", "description", "url"]]
+    console.print(frame_table(show, title="filings", max_rows=200))

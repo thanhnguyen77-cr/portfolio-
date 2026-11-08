@@ -81,20 +81,128 @@ class DataService:
 
     # ------------------------------------------------------------------ adapters
     def _default_adapters(self) -> dict[str, MarketDataAdapter]:
+        from quant.data.adapters.alpaca_data import AlpacaDataAdapter
         from quant.data.adapters.boe import BankOfEnglandAdapter
+        from quant.data.adapters.companies_house import CompaniesHouseAdapter
         from quant.data.adapters.fred import FREDAdapter
+        from quant.data.adapters.nasdaq_data_link import NasdaqDataLinkAdapter
         from quant.data.adapters.ons import ONSAdapter
+        from quant.data.adapters.polygon import PolygonAdapter
         from quant.data.adapters.sec_edgar import SECEdgarAdapter
+        from quant.data.adapters.stooq import StooqAdapter
+        from quant.data.adapters.tiingo import TiingoAdapter
         from quant.data.adapters.yfinance_adapter import YFinanceAdapter
 
-        fred_key = self.settings.fred_api_key.get_secret_value() if self.settings.fred_api_key else None
-        return {
-            "yfinance": YFinanceAdapter(drop_unfinished_session=self.settings.data.drop_unfinished_session),
-            "fred": FREDAdapter(api_key=fred_key),
+        s = self.settings
+
+        def secret(value):  # noqa: ANN001,ANN202
+            return value.get_secret_value() if value else None
+
+        drop = s.data.drop_unfinished_session
+        adapters: dict[str, MarketDataAdapter] = {
+            "yfinance": YFinanceAdapter(drop_unfinished_session=drop),
+            "stooq": StooqAdapter(drop_unfinished_session=drop),
+            "fred": FREDAdapter(api_key=secret(s.fred_api_key)),
             "boe": BankOfEnglandAdapter(),
             "ons": ONSAdapter(),
-            "sec_edgar": SECEdgarAdapter(user_agent=self.settings.sec_user_agent),
+            "ndl": NasdaqDataLinkAdapter(api_key=secret(s.ndl_api_key)),
+            "sec_edgar": SECEdgarAdapter(user_agent=s.sec_user_agent),
         }
+        # keyed vendors are registered only when their credentials are present, so `adapter_for` never
+        # selects an adapter that would fail with AdapterNotConfigured
+        if s.alpaca_api_key and s.alpaca_secret_key:
+            adapters["alpaca_data"] = AlpacaDataAdapter(
+                secret(s.alpaca_api_key), secret(s.alpaca_secret_key), drop_unfinished_session=drop
+            )
+        if s.polygon_api_key:
+            adapters["polygon"] = PolygonAdapter(secret(s.polygon_api_key), drop_unfinished_session=drop)
+        if s.tiingo_api_key:
+            adapters["tiingo"] = TiingoAdapter(secret(s.tiingo_api_key), drop_unfinished_session=drop)
+        if s.companies_house_api_key:
+            adapters["companies_house"] = CompaniesHouseAdapter(secret(s.companies_house_api_key))
+        return adapters
+
+    def adapter_inventory(self) -> pd.DataFrame:
+        """Every adapter this service knows about, configured or not, with capabilities and wiring notes."""
+        from quant.data.adapters.alpaca_data import AlpacaDataAdapter
+        from quant.data.adapters.companies_house import CompaniesHouseAdapter
+        from quant.data.adapters.polygon import PolygonAdapter
+        from quant.data.adapters.stubs import LICENSED_STUBS
+        from quant.data.adapters.tiingo import TiingoAdapter
+
+        rows = []
+        for name, adapter in self.adapters.items():
+            caps = sorted(c.value for c in adapter.capabilities())
+            rows.append(
+                {
+                    "adapter": name,
+                    "configured": True,
+                    "capabilities": ", ".join(caps),
+                    "note": adapter.rate_limit.note,
+                }
+            )
+        unconfigured = {
+            "alpaca_data": (AlpacaDataAdapter, "QUANT_ALPACA_API_KEY + QUANT_ALPACA_SECRET_KEY"),
+            "polygon": (PolygonAdapter, "QUANT_POLYGON_API_KEY"),
+            "tiingo": (TiingoAdapter, "QUANT_TIINGO_API_KEY"),
+            "companies_house": (CompaniesHouseAdapter, "QUANT_COMPANIES_HOUSE_API_KEY"),
+        }
+        for name, (cls, env) in unconfigured.items():
+            if name not in self.adapters:
+                caps = sorted(c.value for c in cls().capabilities())
+                rows.append(
+                    {
+                        "adapter": name,
+                        "configured": False,
+                        "capabilities": ", ".join(caps),
+                        "note": f"set {env}",
+                    }
+                )
+        for cls in LICENSED_STUBS:
+            stub = cls()
+            rows.append(
+                {
+                    "adapter": stub.name,
+                    "configured": False,
+                    "capabilities": ", ".join(sorted(c.value for c in stub.intended_capabilities)),
+                    "note": f"licensed stub ({stub.vendor_label}); " + " ".join(stub.wiring_steps()[:2]),
+                }
+            )
+        return pd.DataFrame(rows, columns=["adapter", "configured", "capabilities", "note"])
+
+    def filings(
+        self,
+        instruments: Sequence[Instrument | str],
+        *,
+        vendor: str | None = None,
+        forms: Sequence[str] | None = None,
+        since: date | str | None = None,
+    ) -> pd.DataFrame:
+        """Filings index (true filing dates) from EDGAR for US names or Companies House for UK names."""
+        insts = [self.resolve(i) for i in instruments]
+        since_d = to_date(since) if since is not None else None
+        chosen = vendor
+        if chosen is None:
+            chosen = "companies_house" if all(i.market.value == "XLON" for i in insts) else "sec_edgar"
+        adapter = self.adapters.get(chosen)
+        if adapter is None or Capability.FILINGS not in adapter.capabilities():
+            raise AdapterError(f"no configured adapter named {chosen!r} provides filings")
+        kwargs: dict[str, Any] = {"since": since_d}
+        if forms:
+            kwargs["forms" if chosen == "sec_edgar" else "categories"] = list(forms)
+        result = adapter.get_filings(insts, **kwargs)  # type: ignore[attr-defined]
+        self.lineage.record(
+            LineageRecord(
+                vendor=adapter.name,
+                operation="filings",
+                instrument_ids=[i.instrument_id for i in insts],
+                params={**result.params},
+                rows=len(result.frame),
+                sha256=frame_digest(result.frame) if not result.frame.empty else None,
+                diff={"errors": result.errors},
+            )
+        )
+        return result.frame
 
     def adapter_for(self, capability: Capability | str, vendor: str | None = None) -> MarketDataAdapter:
         cap = Capability(capability)

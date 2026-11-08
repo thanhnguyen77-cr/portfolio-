@@ -61,6 +61,10 @@ quant paper run demo --strategy fixed_weights -i AAPL,MSFT --weights AAPL=0.05,M
 quant paper submit demo -i AAPL --side buy --qty 10 --type limit --limit 150 --stop-loss 140 --take-profit 180
 quant paper status demo && quant paper reconcile demo
 quant paper live                                                 # prints why live trading is refused
+quant data adapters                                              # configured, keyed-but-unset, and licensed stubs
+quant data fetch AAPL --vendor stooq                             # key-free fallback for daily bars
+quant data filings AAPL --forms 10-K,10-Q --since 2023-01-01     # EDGAR submissions (QUANT_SEC_USER_AGENT)
+quant data filings VOD --vendor companies_house                  # UK filing history (QUANT_COMPANIES_HOUSE_API_KEY)
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -114,7 +118,13 @@ multi-currency SimBroker that re-uses the engine's fill rules and cost model and
 fill-for-fill equivalence test; a DuckDB ledger whose cash and positions are re-derivable from the event log;
 a pre-trade gate ported from the plugin's rule list; a daily runner that replays missed sessions, lets the
 strategy decide on data up to the close, gates and submits orders and reconciles; an HTML blotter; an Alpaca
-adapter that refuses `paper=False`; `quant paper`). Next: S13 remaining data adapters.
+adapter that refuses `paper=False`; `quant paper`), **S13 adapters** (Stooq, Alpaca market data, Polygon
+aggregates + reference dividends/splits, Tiingo prices with embedded actions, Nasdaq Data Link datasets as
+macro series, Companies House filing history, EDGAR submissions filings index; keyed vendors register only
+when their credentials are set; Bloomberg / Refinitiv / FactSet / Capital IQ stubs that declare their
+intended capabilities, advertise none until wired, and raise with concrete steps; a crypto helper module
+for 24/7 series; one contract test over every adapter; `quant data adapters|filings`). Next: S14 docs and
+end-to-end demo.
 
 ## Module map
 
