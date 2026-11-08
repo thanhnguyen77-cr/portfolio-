@@ -115,8 +115,18 @@ def fake_history(frames: dict, fail: set | None = None, calls: list | None = Non
     return _history
 
 
-def make_bars(inst, start, end, *, seed: int = 0, start_price: float = 100.0, vol: float = 0.01,
-              drift: float = 0.0003, vendor: str = "synthetic", adjustment_state: str = "raw"):
+def make_bars(
+    inst,
+    start,
+    end,
+    *,
+    seed: int = 0,
+    start_price: float = 100.0,
+    vol: float = 0.01,
+    drift: float = 0.0003,
+    vendor: str = "synthetic",
+    adjustment_state: str = "raw",
+):
     """Synthetic GBM daily bars for `inst` on its real exchange calendar, in canonical form."""
     import numpy as np
     import pandas as pd
@@ -306,8 +316,13 @@ class FakeMacroAdapter:
                 continue
             frames.append(macro_frame(sid, pd.Series(window.index), pd.Series(window.to_numpy()), self.name))
         frame = pd.concat(frames, ignore_index=True) if frames else _empty_macro()
-        return AdapterResult(vendor=self.name, frame=frame, errors=errors, requested=list(series_ids),
-                             params={"start": str(start), "end": str(end)})
+        return AdapterResult(
+            vendor=self.name,
+            frame=frame,
+            errors=errors,
+            requested=list(series_ids),
+            params={"start": str(start), "end": str(end)},
+        )
 
     def get_bars(self, instruments, start, end, freq="1d"):
         raise NotImplementedError
@@ -320,3 +335,55 @@ class FakeMacroAdapter:
 
     def __exit__(self, *exc):
         return None
+
+
+# --------------------------------------------------------------------------- S3: backtest helpers
+
+
+def zero_costs(**overrides):
+    """A CostModel with every cost switched off (tests pin analytic results), overridable per field."""
+    from quant.backtest.costs import CostModel
+
+    base = dict(
+        half_spread_bps=0.0,
+        slippage_bps=0.0,
+        fx_cost_bps=0.0,
+        borrow_bps_annual=0.0,
+        apply_transaction_taxes=False,
+    )
+    base.update(overrides)
+    return CostModel(**base)
+
+
+class ScheduleStrategy:
+    """Emit orders on given session indexes: schedule = {index: [(instrument_id, side, qty, kw)]}."""
+
+    name = "schedule"
+    warmup = 0
+
+    def __init__(self, instruments, schedule, weights_at=None):
+        self.instruments = list(instruments)
+        self.params = {"schedule": {k: [(a, b, c) for a, b, c, *_ in v] for k, v in schedule.items()}}
+        self.schedule = schedule
+        self.weights_at = weights_at or {}
+
+    def on_start(self, instruments):
+        return None
+
+    def on_session(self, ctx):
+        if ctx.session_index in self.weights_at:
+            return self.weights_at[ctx.session_index]
+        orders = []
+        for iid, side, qty, *rest in self.schedule.get(ctx.session_index, []):
+            kw = rest[0] if rest else {}
+            kind = kw.pop("type", "market")
+            if kind == "market":
+                orders.append(ctx.market_order(iid, side, qty, **kw))
+            elif kind == "limit":
+                orders.append(ctx.limit_order(iid, side, qty, kw.pop("limit_price"), **kw))
+            elif kind == "stop":
+                orders.append(ctx.stop_order(iid, side, qty, kw.pop("stop_price"), **kw))
+        return orders or None
+
+    def describe(self):
+        return {"name": self.name, "instruments": self.instruments, "params": {}}

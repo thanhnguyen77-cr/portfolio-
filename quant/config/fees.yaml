@@ -48,7 +48,8 @@ us:
       verified: false
       note: >-
         USD 27.80 per million of sale proceeds (Section 31 fee). The SEC resets this rate at least annually;
-        later rates must be appended here.
+        later rates must be appended here. No earlier rate is encoded, so backtests before 2024-05-22
+        charge no Section 31 fee (the same holds for FINRA TAF before 2024-01-01).
   finra_taf:
     - effective_from: 2024-01-01
       per_share: 0.000166

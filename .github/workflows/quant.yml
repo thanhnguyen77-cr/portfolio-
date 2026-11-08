@@ -34,7 +34,9 @@ jobs:
         run: python -m pip install -e ".[dev,yfinance]"
 
       - name: Lint
-        run: ruff check quant tests/quant
+        run: |
+          ruff check quant tests/quant
+          ruff format --check quant tests/quant
 
       - name: Test (no network)
         run: pytest tests/quant -q

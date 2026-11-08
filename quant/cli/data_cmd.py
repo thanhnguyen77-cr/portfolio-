@@ -115,8 +115,20 @@ def validate(
     if table.empty:
         console.print("[yellow]no cached bars to validate (use --refresh to fetch)[/yellow]")
         raise typer.Exit(code=1)
-    cols = ["instrument_id", "grade", "score", "bars", "gaps", "stale_days", "outliers", "ohlc_violations",
-            "denomination_changes", "unexplained_jumps", "dividend_warnings", "issues"]
+    cols = [
+        "instrument_id",
+        "grade",
+        "score",
+        "bars",
+        "gaps",
+        "stale_days",
+        "outliers",
+        "ohlc_violations",
+        "denomination_changes",
+        "unexplained_jumps",
+        "dividend_warnings",
+        "issues",
+    ]
     console.print(frame_table(table[cols], title="data quality"))
     if issues and not report.issues_frame().empty:
         console.print(frame_table(report.issues_frame(), title="issues", max_rows=200))

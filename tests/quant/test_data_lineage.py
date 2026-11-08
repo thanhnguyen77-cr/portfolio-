@@ -27,8 +27,14 @@ def test_record_and_query(tmp_path):
     db = DuckDBStore(tmp_path / "q.duckdb")
     db.migrate()
     log = LineageLog(db)
-    rec = LineageRecord(vendor="fake", operation="fetch", instrument_ids=["XNAS_AAPL", "XLON_VOD"], rows=10,
-                        params={"start": "2024-01-01"}, diff={"writes": 2})
+    rec = LineageRecord(
+        vendor="fake",
+        operation="fetch",
+        instrument_ids=["XNAS_AAPL", "XLON_VOD"],
+        rows=10,
+        params={"start": "2024-01-01"},
+        diff={"writes": 2},
+    )
     log.record(rec)
     log.record(LineageRecord(vendor="fake", operation="fetch", instrument_ids=["FX_GBPUSD"], rows=3))
     recent = log.recent()
