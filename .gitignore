@@ -8,3 +8,14 @@ __pycache__/
 # simulation data downloads and run outputs
 sim/data/
 sim/runs/
+# quant platform (python package at quant/)
+.venv/
+/data/
+*.duckdb
+*.duckdb.wal
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+build/
+.env

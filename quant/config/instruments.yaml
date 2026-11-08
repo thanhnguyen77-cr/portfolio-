@@ -1,0 +1,111 @@
+# Seed instrument catalogue. Index-universe equities are loaded by quant.universe (constituents), so only a
+# few reference equities appear here. Every entry resolves to a trading calendar through `market`.
+#   price_scale 0.01  -> vendor quotes in GBX (pence); after scaling, prices are in `currency` (GBP).
+#   tradable false    -> analysis-only series (indices, yields, continuous futures).
+#   stamp_duty_class  -> drives UK/Irish transaction taxes; `unknown` is taxed conservatively.
+instruments:
+  # ---------------------------------------------------------------- reference equities: US
+  - {symbol: AAPL, name: "Apple Inc.", asset_class: equity, market: XNAS, currency: USD, country: US,
+     sector: Technology, stamp_duty_class: exempt, identifiers: {yahoo: AAPL, stooq: AAPL.US}}
+  - {symbol: MSFT, name: "Microsoft Corp.", asset_class: equity, market: XNAS, currency: USD, country: US,
+     sector: Technology, stamp_duty_class: exempt, identifiers: {yahoo: MSFT, stooq: MSFT.US}}
+  - {symbol: JPM, name: "JPMorgan Chase & Co.", asset_class: equity, market: XNYS, currency: USD, country: US,
+     sector: Financials, stamp_duty_class: exempt, identifiers: {yahoo: JPM, stooq: JPM.US}}
+  - {symbol: XOM, name: "Exxon Mobil Corp.", asset_class: equity, market: XNYS, currency: USD, country: US,
+     sector: Energy, stamp_duty_class: exempt, identifiers: {yahoo: XOM, stooq: XOM.US}}
+
+  # ---------------------------------------------------------------- reference equities: UK (GBX quotes)
+  - {symbol: VOD, name: "Vodafone Group plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Telecommunications, stamp_duty_class: uk_ordinary,
+     identifiers: {yahoo: VOD.L, stooq: VOD.UK}}
+  - {symbol: SHEL, name: "Shell plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Energy, stamp_duty_class: uk_ordinary, identifiers: {yahoo: SHEL.L, stooq: SHEL.UK},
+     notes: "Dividends declared in USD."}
+  - {symbol: BP, name: "BP plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Energy, stamp_duty_class: uk_ordinary, identifiers: {yahoo: BP.L, stooq: BP.UK},
+     notes: "Dividends declared in USD."}
+  - {symbol: HSBA, name: "HSBC Holdings plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Financials, stamp_duty_class: uk_ordinary, identifiers: {yahoo: HSBA.L, stooq: HSBA.UK},
+     notes: "Dividends declared in USD."}
+  - {symbol: AZN, name: "AstraZeneca plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Health Care, stamp_duty_class: uk_ordinary, identifiers: {yahoo: AZN.L, stooq: AZN.UK}}
+  - {symbol: ULVR, name: "Unilever plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: GB, sector: Consumer Staples, stamp_duty_class: uk_ordinary, identifiers: {yahoo: ULVR.L, stooq: ULVR.UK}}
+  - {symbol: EXPN, name: "Experian plc", asset_class: equity, market: XLON, currency: GBP, price_scale: 0.01,
+     country: JE, sector: Industrials, stamp_duty_class: exempt, identifiers: {yahoo: EXPN.L, stooq: EXPN.UK},
+     notes: "Jersey-incorporated; SDRT treatment to be confirmed per share register."}
+
+  # ---------------------------------------------------------------- ETFs: US
+  - {symbol: SPY, name: "SPDR S&P 500 ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: SPY, stooq: SPY.US}}
+  - {symbol: QQQ, name: "Invesco QQQ Trust", asset_class: etf, market: XNAS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: QQQ, stooq: QQQ.US}}
+  - {symbol: IWM, name: "iShares Russell 2000 ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: IWM, stooq: IWM.US}}
+  - {symbol: DIA, name: "SPDR Dow Jones Industrial Average ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: DIA, stooq: DIA.US}}
+  - {symbol: TLT, name: "iShares 20+ Year Treasury Bond ETF", asset_class: etf, market: XNAS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: TLT, stooq: TLT.US}}
+  - {symbol: IEF, name: "iShares 7-10 Year Treasury Bond ETF", asset_class: etf, market: XNAS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: IEF, stooq: IEF.US}}
+  - {symbol: LQD, name: "iShares iBoxx IG Corporate Bond ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: LQD, stooq: LQD.US}}
+  - {symbol: HYG, name: "iShares iBoxx High Yield Corporate Bond ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: HYG, stooq: HYG.US}}
+  - {symbol: GLD, name: "SPDR Gold Shares", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: GLD, stooq: GLD.US}}
+  - {symbol: SLV, name: "iShares Silver Trust", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: SLV, stooq: SLV.US}}
+  - {symbol: USO, name: "United States Oil Fund", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: USO, stooq: USO.US}}
+  - {symbol: DBC, name: "Invesco DB Commodity Index Tracking Fund", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: DBC, stooq: DBC.US}}
+  - {symbol: VEA, name: "Vanguard FTSE Developed Markets ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: VEA, stooq: VEA.US}}
+  - {symbol: EEM, name: "iShares MSCI Emerging Markets ETF", asset_class: etf, market: XNYS, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: EEM, stooq: EEM.US}}
+
+  # ---------------------------------------------------------------- ETFs: UK (GBX quotes, SDRT-exempt)
+  - {symbol: ISF, name: "iShares Core FTSE 100 UCITS ETF", asset_class: etf, market: XLON, currency: GBP, price_scale: 0.01, stamp_duty_class: exempt, identifiers: {yahoo: ISF.L, stooq: ISF.UK}}
+  - {symbol: VUKE, name: "Vanguard FTSE 100 UCITS ETF", asset_class: etf, market: XLON, currency: GBP, price_scale: 0.01, stamp_duty_class: exempt, identifiers: {yahoo: VUKE.L, stooq: VUKE.UK}}
+  - {symbol: VMID, name: "Vanguard FTSE 250 UCITS ETF", asset_class: etf, market: XLON, currency: GBP, price_scale: 0.01, stamp_duty_class: exempt, identifiers: {yahoo: VMID.L, stooq: VMID.UK}}
+  - {symbol: IGLT, name: "iShares Core UK Gilts UCITS ETF", asset_class: etf, market: XLON, currency: GBP, price_scale: 0.01, stamp_duty_class: exempt, identifiers: {yahoo: IGLT.L, stooq: IGLT.UK}}
+  - {symbol: IUKD, name: "iShares UK Dividend UCITS ETF", asset_class: etf, market: XLON, currency: GBP, price_scale: 0.01, stamp_duty_class: exempt, identifiers: {yahoo: IUKD.L, stooq: IUKD.UK}}
+
+  # ---------------------------------------------------------------- indices (analysis only)
+  - {symbol: SPX, name: "S&P 500", asset_class: index, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^GSPC, stooq: ^SPX}}
+  - {symbol: NDX, name: "Nasdaq-100", asset_class: index, market: XNAS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^NDX, stooq: ^NDX}}
+  - {symbol: DJI, name: "Dow Jones Industrial Average", asset_class: index, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^DJI, stooq: ^DJI}}
+  - {symbol: RUT, name: "Russell 2000", asset_class: index, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^RUT}}
+  - {symbol: VIX, name: "CBOE Volatility Index", asset_class: index, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^VIX, stooq: ^VIX}}
+  - {symbol: UKX, name: "FTSE 100", asset_class: index, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^FTSE, stooq: ^UKX}}
+  - {symbol: MCX, name: "FTSE 250", asset_class: index, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^FTMC}}
+  - {symbol: ASX, name: "FTSE All-Share", asset_class: index, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ^FTAS}}
+
+  # ---------------------------------------------------------------- FX majors and GBP crosses (currency = quote ccy)
+  - {symbol: GBPUSD, name: "GBP/USD", asset_class: fx, market: FX, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: GBPUSD=X}}
+  - {symbol: EURUSD, name: "EUR/USD", asset_class: fx, market: FX, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: EURUSD=X}}
+  - {symbol: USDJPY, name: "USD/JPY", asset_class: fx, market: FX, currency: JPY, stamp_duty_class: exempt, identifiers: {yahoo: USDJPY=X}}
+  - {symbol: EURGBP, name: "EUR/GBP", asset_class: fx, market: FX, currency: GBP, stamp_duty_class: exempt, identifiers: {yahoo: EURGBP=X}}
+  - {symbol: GBPEUR, name: "GBP/EUR", asset_class: fx, market: FX, currency: EUR, stamp_duty_class: exempt, identifiers: {yahoo: GBPEUR=X}}
+  - {symbol: GBPJPY, name: "GBP/JPY", asset_class: fx, market: FX, currency: JPY, stamp_duty_class: exempt, identifiers: {yahoo: GBPJPY=X}}
+  - {symbol: GBPCHF, name: "GBP/CHF", asset_class: fx, market: FX, currency: CHF, stamp_duty_class: exempt, identifiers: {yahoo: GBPCHF=X}}
+  - {symbol: GBPAUD, name: "GBP/AUD", asset_class: fx, market: FX, currency: AUD, stamp_duty_class: exempt, identifiers: {yahoo: GBPAUD=X}}
+  - {symbol: GBPCAD, name: "GBP/CAD", asset_class: fx, market: FX, currency: CAD, stamp_duty_class: exempt, identifiers: {yahoo: GBPCAD=X}}
+  - {symbol: USDCHF, name: "USD/CHF", asset_class: fx, market: FX, currency: CHF, stamp_duty_class: exempt, identifiers: {yahoo: USDCHF=X}}
+  - {symbol: AUDUSD, name: "AUD/USD", asset_class: fx, market: FX, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: AUDUSD=X}}
+  - {symbol: USDCAD, name: "USD/CAD", asset_class: fx, market: FX, currency: CAD, stamp_duty_class: exempt, identifiers: {yahoo: USDCAD=X}}
+  - {symbol: NZDUSD, name: "NZD/USD", asset_class: fx, market: FX, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: NZDUSD=X}}
+
+  # ---------------------------------------------------------------- government bond yields and policy rates (percent, analysis only)
+  - {symbol: US3M, name: "US Treasury 3-month yield", asset_class: rate, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {fred: DGS3MO}}
+  - {symbol: US2Y, name: "US Treasury 2-year yield", asset_class: rate, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {fred: DGS2}}
+  - {symbol: US10Y, name: "US Treasury 10-year yield", asset_class: rate, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {fred: DGS10, yahoo: ^TNX}}
+  - {symbol: US30Y, name: "US Treasury 30-year yield", asset_class: rate, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {fred: DGS30, yahoo: ^TYX}}
+  - {symbol: FEDFUNDS, name: "Effective Federal Funds Rate", asset_class: rate, market: XNYS, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {fred: DFF}}
+  - {symbol: BOEBASE, name: "Bank of England Bank Rate", asset_class: rate, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {boe: IUDBEDR}}
+  - {symbol: SONIA, name: "SONIA overnight rate", asset_class: rate, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {boe: IUDSOIA},
+     notes: "BoE series code to be verified against the IADB."}
+  - {symbol: UK10Y, name: "UK gilt 10-year nominal par yield", asset_class: rate, market: XLON, currency: GBP, tradable: false, stamp_duty_class: exempt, identifiers: {boe: IUDMNPY},
+     notes: "BoE series code to be verified against the IADB."}
+
+  # ---------------------------------------------------------------- commodities: vendor continuous front-month futures (analysis only)
+  - {symbol: GOLD, name: "Gold futures (continuous)", asset_class: commodity, market: XCEC, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: GC=F}, notes: "Roll gaps not modelled."}
+  - {symbol: SILVER, name: "Silver futures (continuous)", asset_class: commodity, market: XCEC, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: SI=F}, notes: "Roll gaps not modelled."}
+  - {symbol: COPPER, name: "Copper futures (continuous)", asset_class: commodity, market: XCEC, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: HG=F}, notes: "Roll gaps not modelled."}
+  - {symbol: WTI, name: "WTI crude futures (continuous)", asset_class: commodity, market: XNYM, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: CL=F}, notes: "Roll gaps not modelled."}
+  - {symbol: BRENT, name: "Brent crude futures (continuous)", asset_class: commodity, market: XNYM, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: BZ=F}, notes: "ICE Brent approximated with the NYMEX calendar. Roll gaps not modelled."}
+  - {symbol: NATGAS, name: "Henry Hub natural gas futures (continuous)", asset_class: commodity, market: XNYM, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: NG=F}, notes: "Roll gaps not modelled."}
+  - {symbol: WHEAT, name: "Chicago wheat futures (continuous)", asset_class: commodity, market: XCBT, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ZW=F}, notes: "Roll gaps not modelled."}
+  - {symbol: CORN, name: "Corn futures (continuous)", asset_class: commodity, market: XCBT, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ZC=F}, notes: "Roll gaps not modelled."}
+  - {symbol: SOYBEANS, name: "Soybean futures (continuous)", asset_class: commodity, market: XCBT, currency: USD, tradable: false, stamp_duty_class: exempt, identifiers: {yahoo: ZS=F}, notes: "Roll gaps not modelled."}
+
+  # ---------------------------------------------------------------- crypto (optional module, 24/7)
+  - {symbol: BTCUSD, name: "Bitcoin / USD", asset_class: crypto, market: CRYPTO, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: BTC-USD}}
+  - {symbol: ETHUSD, name: "Ether / USD", asset_class: crypto, market: CRYPTO, currency: USD, stamp_duty_class: exempt, identifiers: {yahoo: ETH-USD}}

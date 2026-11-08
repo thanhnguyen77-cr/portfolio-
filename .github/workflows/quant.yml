@@ -1,0 +1,43 @@
+name: quant platform tests
+
+# Runs only when the quant package, its tests or its packaging change.
+# The legacy stdlib-only plugin tests are covered by pages.yml; the last step here
+# re-runs them with the quant stack installed to prove the two test suites stay independent.
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["quant/**", "tests/quant/**", "pyproject.toml", ".github/workflows/quant.yml"]
+  pull_request:
+    paths: ["quant/**", "tests/quant/**", "pyproject.toml", ".github/workflows/quant.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install
+        run: python -m pip install -e ".[dev,yfinance]"
+
+      - name: Lint
+        run: ruff check quant tests/quant
+
+      - name: Test (no network)
+        run: pytest tests/quant -q
+
+      - name: Legacy stdlib-only tests still pass alongside the quant stack
+        run: python -m unittest discover -s tests -q

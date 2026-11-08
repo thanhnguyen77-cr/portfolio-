@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-platform"
+version = "0.1.0"
+description = "Multi-asset quant research, backtesting and PAPER trading platform for US and UK markets. Research use only; live trading disabled by design."
+readme = "quant/README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "thanhnguyen77-cr" }]
+keywords = ["quant", "backtesting", "paper-trading", "factors", "risk", "uk", "us"]
+dependencies = [
+  "numpy>=2.0,<3",
+  "pandas>=2.2,<4",
+  "scipy>=1.13",
+  "statsmodels>=0.14",
+  "arch>=7.0",
+  "scikit-learn>=1.5",
+  "duckdb>=1.1",
+  "pyarrow>=17",
+  "exchange-calendars>=4.5",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "PyYAML>=6",
+  "typer>=0.12",
+  "rich>=13",
+  "jinja2>=3.1",
+  "plotly>=5.22",
+  "requests>=2.32",
+  "tenacity>=8",
+  "filelock>=3.13",
+  "python-dateutil>=2.9",
+]
+
+[project.optional-dependencies]
+yfinance = ["yfinance>=0.2.40", "lxml>=5"]
+alpaca = ["alpaca-py>=0.30"]
+polygon = ["polygon-api-client>=1.14"]
+tiingo = ["tiingo>=0.15"]
+ndl = ["nasdaq-data-link>=1.0"]
+fred = ["fredapi>=0.5"]
+all-data = ["quant-platform[yfinance,alpaca,polygon,tiingo,ndl,fred]"]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "pytest-xdist>=3.5",
+  "hypothesis>=6.100",
+  "responses>=0.25",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[project.scripts]
+quant = "quant.cli.main:app"
+
+[project.urls]
+Repository = "https://github.com/thanhnguyen77-cr/portfolio-"
+
+[tool.setuptools.packages.find]
+include = ["quant*"]
+
+[tool.setuptools.package-data]
+quant = ["config/*.yaml", "reports/templates/*.html", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/quant"]
+addopts = "-m 'not live' -p no:cacheprovider"
+markers = [
+  "live: hits real network endpoints; deselected by default and never run in CI",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["plugins", "sim", "site", "tools", "tests/test_trader.py", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quant"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["quant"]
+ignore_missing_imports = true

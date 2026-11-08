@@ -1,0 +1,68 @@
+# quant — multi-asset research, backtesting and PAPER trading (US + UK)
+
+A Python package for quantitative research on US and UK markets: a swappable data layer with a local
+Parquet/DuckDB cache, point-in-time universes, fundamental / technical / factor / macro / statistical
+analysis modules, an event-driven multi-currency backtester, portfolio construction, risk analytics and a
+simulated paper broker.
+
+> **Research and paper trading only.** There is no live broker in this version. The live-trading gate
+> (`quant.config.live_gate`) requires a config flag, an environment variable *and* a typed confirmation, and
+> then still raises `NotImplementedError`. Backtests describe the past under stated assumptions; nothing
+> here is a claim that any strategy is profitable, or that the code is free of errors. Every report ends
+> with a *Caveats* section that lists the assumptions, data-quality flags, survivorship coverage and the
+> number of variants tried.
+
+## Install
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev,yfinance]"        # add alpaca / polygon / tiingo / ndl / fred extras as needed
+quant version
+quant config                             # effective settings, secrets masked
+```
+
+Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
+→ `.env` → environment variables (`QUANT_TRADING__BASE_CURRENCY=GBP`, `QUANT_FRED_API_KEY=…`). API keys are
+only ever read from the environment or `.env`, never from YAML.
+
+## Tests
+
+```bash
+pytest tests/quant -q          # no network: sockets, requests and yfinance are blocked by conftest.py
+pytest -m live tests/quant     # opt-in smoke tests against real endpoints (never run in CI)
+ruff check quant tests/quant
+```
+
+## Status
+
+Built in tested stages; see the repository history. Each stage's status note states what passed, what was
+skipped and known gaps. Current stage: **S0 — scaffold** (packaging, settings, calendars, core types,
+live-trading gate, fee schedule, instrument catalogue).
+
+## Module map
+
+| Package | Purpose |
+|---|---|
+| `quant.config` | settings, date-effective fee tables, instrument seed catalogue, live-trading gate |
+| `quant.core` | `Instrument` and enums, exchange calendars (XNYS, XLON, FX, CRYPTO, US futures), the `now()` seam, errors |
+| `quant.data` | adapters (yfinance, FRED, BoE, ONS, EDGAR, …; licensed stubs), Parquet/DuckDB store, validation, FX, lineage |
+| `quant.universe` | index constituents, point-in-time membership, liquidity/volatility/data-quality screens |
+| `quant.fundamental` | PIT statements, ratios, DCF, comparables, quality/value/growth scores, earnings surprise |
+| `quant.technical` | trend, momentum, volatility, volume indicators; support/resistance; regimes |
+| `quant.factors` | factor construction, long-short returns, exposures and attribution |
+| `quant.macro` | rates, inflation, yield curve, cross-asset regime board |
+| `quant.stats` | stationarity, cointegration, GARCH, PCA, regression diagnostics |
+| `quant.portfolio` | mean-variance, risk parity, Black-Litterman, HRP, vol targeting, sizing |
+| `quant.risk` | VaR/CVaR, stress tests, scenarios, correlation breakdown, drawdowns |
+| `quant.backtest` | event-driven multi-currency engine, orders/fills, costs, metrics, robustness analysis |
+| `quant.paper` | broker protocol, SimBroker, Alpaca paper adapter, pre-trade gate, ledger, daily runner |
+| `quant.reports` | self-contained HTML reports |
+| `quant.cli` | the `quant` command |
+
+## Known limitations (kept current as stages land)
+
+- Daily bars only. Intraday is supported by the storage schema but not by the backtester.
+- Free data sources give **approximate** point-in-time universes. FTSE 100/250 history is `current_only`
+  until snapshots accumulate; every backtest reports its survivorship coverage.
+- Transaction taxes and levies are modelled from a date-effective table (`quant/config/fees.yaml`); entries
+  marked `verified: false` have not yet been checked against the primary source.
