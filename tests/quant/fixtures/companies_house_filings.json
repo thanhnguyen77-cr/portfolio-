@@ -1,0 +1,6 @@
+{"total_count": 3, "items_per_page": 100, "start_index": 0, "filing_history_status": "filing-history-available",
+ "items": [
+  {"date": "2024-05-14", "type": "AA", "category": "accounts", "description": "accounts-with-accounts-type-group", "transaction_id": "MzQxMjM0NTY3OGFkaXF6a2N4", "description_values": {"made_up_date": "2024-03-31"}, "links": {"self": "/company/01833679/filing-history/MzQxMjM0NTY3OGFkaXF6a2N4", "document_metadata": "https://frontend-doc-api.company-information.service.gov.uk/document/abc"}},
+  {"date": "2023-12-01", "type": "CS01", "category": "confirmation-statement", "description": "confirmation-statement-with-no-updates", "transaction_id": "MzM5ODc2NTQzMmFkaXF6a2N4", "description_values": {"made_up_date": "2023-11-15"}, "links": {"self": "/company/01833679/filing-history/MzM5ODc2NTQzMmFkaXF6a2N4"}},
+  {"date": "2023-05-16", "type": "AA", "category": "accounts", "description": "accounts-with-accounts-type-group", "transaction_id": "MzM3NjU0MzIxMGFkaXF6a2N4", "description_values": {"made_up_date": "2023-03-31"}, "links": {"self": "/company/01833679/filing-history/MzM3NjU0MzIxMGFkaXF6a2N4"}}
+ ]}

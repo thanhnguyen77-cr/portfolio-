@@ -1,0 +1,70 @@
+# Date-effective transaction taxes and levies. A rule applies from `effective_from` until a later rule
+# supersedes it. `verified: false` marks values NOT yet checked against the primary source; the backtester
+# lists those in its Caveats. Rates are fractions of consideration; amounts are in the stated currency.
+uk:
+  sdrt:
+    - effective_from: 1986-10-27
+      rate: 0.005
+      applies_to: [uk_ordinary, unknown]
+      sides: [buy]
+      source: https://www.gov.uk/guidance/stamp-duty-reserve-tax-the-basics
+      verified: true
+      note: >-
+        0.5% Stamp Duty Reserve Tax on electronic purchases of UK-incorporated company shares, including
+        investment trusts. Instruments with an UNKNOWN stamp-duty class are taxed conservatively.
+  irish_stamp_duty:
+    - effective_from: 2000-01-01
+      rate: 0.01
+      applies_to: [irish]
+      sides: [buy]
+      source: https://www.revenue.ie/
+      verified: true
+      note: 1% stamp duty on purchases of Irish-incorporated company shares. Earlier history is not modelled.
+  ptm_levy:
+    - effective_from: 1990-01-01
+      amount: 1.00
+      currency: GBP
+      threshold: 10000
+      sides: [buy, sell]
+      source: https://www.thetakeoverpanel.org.uk/
+      verified: true
+      note: Flat Panel on Takeovers and Mergers levy on UK equity trades above the threshold, both sides.
+    - effective_from: 2023-04-10
+      amount: 1.50
+      currency: GBP
+      threshold: 10000
+      sides: [buy, sell]
+      source: https://www.thetakeoverpanel.org.uk/disclosure/ptm-levy
+      verified: false
+      note: >-
+        Amount confirmed on the Panel's PTM Levy page on 2026-11-08 ("150p per contract where the total
+        consideration ... is greater than GBP 10,000"). The page gives no effective date, so 2023-04-10 is
+        still unconfirmed; the rule stays unverified until the date is checked against a Panel statement.
+
+us:
+  sec_section31:
+    - effective_from: 2024-05-22
+      rate_per_unit: 0.0000278
+      currency: USD
+      sides: [sell]
+      source: https://www.sec.gov/about/divisions-offices/office-financial-management/fee-rate-advisories
+      verified: false
+      note: >-
+        USD 27.80 per million of sale proceeds (Section 31 fee). The SEC resets this rate at least annually;
+        later rates must be appended here. No earlier rate is encoded, so backtests before 2024-05-22
+        charge no Section 31 fee (the same holds for FINRA TAF before 2024-01-01). Verification attempt on
+        2026-11-08: sec.gov answers HTTP 403 to requests without a personal contact User-Agent, so the rate
+        was not checked from the build environment.
+  finra_taf:
+    - effective_from: 2024-01-01
+      per_share: 0.000166
+      max_per_trade: 8.30
+      currency: USD
+      sides: [sell]
+      source: https://www.finra.org/rules-guidance/rulebooks/corporate-organization/section-1-member-regulatory-fees
+      verified: false
+      note: >-
+        FINRA Trading Activity Fee on equity sells. Rate (USD 0.000166 per share) and cap (USD 8.30 per
+        trade) confirmed against FINRA By-Laws Schedule A Section 1(b) on 2026-11-08; that page states the
+        current rates without their effective dates, so 2024-01-01 is still unconfirmed and the rule stays
+        unverified until the date is checked against the FINRA notice that set it.

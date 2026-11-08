@@ -1,0 +1,17 @@
+# Package defaults. Layer your own YAML on top (`quant config --config my.yaml`) or use environment
+# variables (QUANT_TRADING__BASE_CURRENCY=GBP). API keys are read only from the environment / .env.
+paths:
+  data_dir: data
+
+trading:
+  live_enabled: false            # Live-trading gate. This version has no live broker even when true.
+  default_broker: sim            # sim | alpaca   (Alpaca is paper-only and US-only)
+  base_currency: USD
+  cash_policy: convert_at_fill   # convert_at_fill | hold_foreign
+  fx_cost_bps: 2.0
+
+data:
+  adapter_priority: [yfinance, stooq, fred, boe, ons, sec_edgar]
+  cache_ttl_hours: 12
+  drop_unfinished_session: true
+  default_start: "2000-01-01"
