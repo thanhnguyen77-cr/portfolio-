@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from quant.core.errors import CalendarError
-from quant.core.time import to_date
+from quant.core.time import now, to_date
 
 CALENDAR_START = "1990-01-01"
 # Codes exchange_calendars ships. CME Group venues (CBOT, COMEX, NYMEX) trade on Globex and map to CMES.
@@ -40,6 +40,12 @@ class TradingCalendar:
 
     def session_close(self, d: DateLike) -> pd.Timestamp:
         raise NotImplementedError
+
+    def session_closes(self, start: DateLike, end: DateLike) -> pd.Series:
+        """UTC close timestamps indexed by tz-naive session date, for every session in [start, end]."""
+        sessions = self.sessions(start, end)
+        values = [self.session_close(s) for s in sessions]
+        return pd.Series(values, index=sessions, dtype="datetime64[ns, UTC]", name="ts_close_utc")
 
     def date_to_session(self, d: DateLike, direction: str = "previous") -> date:
         """Nearest session on or before (`previous`) / on or after (`next`) `d`."""
@@ -98,6 +104,11 @@ class ExchangeCalendarAdapter(TradingCalendar):
     def session_close(self, d: DateLike) -> pd.Timestamp:
         return self._cal.session_close(self._session(d)).tz_convert("UTC")
 
+    def session_closes(self, start: DateLike, end: DateLike) -> pd.Series:
+        sessions = self.sessions(start, end)
+        closes = self._cal.closes.reindex(sessions).dt.tz_convert("UTC")
+        return closes.astype("datetime64[ns, UTC]").rename("ts_close_utc")
+
     def date_to_session(self, d: DateLike, direction: str = "previous") -> date:
         if direction not in {"next", "previous"}:
             raise ValueError("direction must be 'next' or 'previous'")
@@ -135,6 +146,11 @@ class WeekdayFXCalendar(TradingCalendar):
     def session_open(self, d: DateLike) -> pd.Timestamp:
         return self.session_close(d) - pd.Timedelta(days=1)
 
+    def session_closes(self, start: DateLike, end: DateLike) -> pd.Series:
+        sessions = self.sessions(start, end)
+        local = (sessions + pd.Timedelta(hours=17)).tz_localize(self._ny)
+        return pd.Series(local.tz_convert("UTC"), index=sessions, name="ts_close_utc")
+
 
 class AllDaysCryptoCalendar(TradingCalendar):
     """24/7 proxy: every calendar day is a session running 00:00:00-23:59:59 UTC."""
@@ -153,6 +169,11 @@ class AllDaysCryptoCalendar(TradingCalendar):
 
     def session_close(self, d: DateLike) -> pd.Timestamp:
         return pd.Timestamp(to_date(d), tz="UTC") + pd.Timedelta(hours=23, minutes=59, seconds=59)
+
+    def session_closes(self, start: DateLike, end: DateLike) -> pd.Series:
+        sessions = self.sessions(start, end)
+        closes = (sessions + pd.Timedelta(hours=23, minutes=59, seconds=59)).tz_localize("UTC")
+        return pd.Series(closes, index=sessions, name="ts_close_utc")
 
 
 @cache
@@ -190,6 +211,17 @@ def last_close(d: DateLike, codes: Iterable[str]) -> pd.Timestamp:
     if not open_codes:
         raise CalendarError(f"no market in {codes} is open on {to_date(d)}")
     return max(get_calendar(c).session_close(d) for c in open_codes)
+
+
+def latest_complete_session(code: str, at: pd.Timestamp | datetime | None = None) -> date:
+    """The most recent session of `code` whose close is at or before `at` (default: now)."""
+    cal = get_calendar(code)
+    at_ts = pd.Timestamp(at if at is not None else now())
+    at_ts = at_ts.tz_localize("UTC") if at_ts.tzinfo is None else at_ts.tz_convert("UTC")
+    session = cal.date_to_session(at_ts.date(), "previous")
+    if cal.session_close(session) > at_ts:
+        session = cal.previous_session(session)
+    return session
 
 
 def next_open(code: str, after: DateLike) -> tuple[date, pd.Timestamp]:

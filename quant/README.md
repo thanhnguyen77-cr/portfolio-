@@ -19,6 +19,10 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev,yfinance]"        # add alpaca / polygon / tiingo / ndl / fred extras as needed
 quant version
 quant config                             # effective settings, secrets masked
+quant data instruments --market XLON     # the seed catalogue
+quant data fetch AAPL VOD.L --start 2020-01-01   # daily bars into the local Parquet/DuckDB cache
+quant data show VOD.L --tail 5           # pence already converted to pounds
+quant data lineage                       # what was fetched, from where, how many rows, content hash
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -36,8 +40,8 @@ ruff check quant tests/quant
 ## Status
 
 Built in tested stages; see the repository history. Each stage's status note states what passed, what was
-skipped and known gaps. Current stage: **S0 — scaffold** (packaging, settings, calendars, core types,
-live-trading gate, fee schedule, instrument catalogue).
+skipped and known gaps. Completed: **S0 scaffold**, **S1 data core** (adapter contract, yfinance adapter,
+Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`). Next: S2 data quality.
 
 ## Module map
 

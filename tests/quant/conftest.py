@@ -77,3 +77,147 @@ def tmp_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     settings = load_settings(paths={"data_dir": str(tmp_path / "data")})
     settings.paths.ensure()
     return settings
+
+
+# --------------------------------------------------------------------------- S1: data-layer helpers
+
+
+def load_yf_fixture(name: str):
+    """A recorded yfinance `Ticker.history()` frame (tz-aware exchange-local index, Yahoo column names)."""
+    import pandas as pd
+
+    df = pd.read_csv(FIXTURES / f"yfinance_{name}_history.csv", index_col=0)
+    df.index = pd.to_datetime(df.index, utc=True)
+    tz = "America/New_York" if name.endswith("AAPL") else "Europe/London"
+    df.index = df.index.tz_convert(tz)
+    df.index.name = "Date"
+    return df
+
+
+def fake_history(frames: dict, fail: set | None = None, calls: list | None = None):
+    """Build a `history_fn` seam replacement serving `frames[symbol]` sliced to [start, end]."""
+    import pandas as pd
+
+    fail = fail or set()
+
+    def _history(symbol: str, start, end, interval: str):
+        if calls is not None:
+            calls.append((symbol, start, end, interval))
+        if symbol in fail:
+            raise RuntimeError(f"simulated vendor failure for {symbol}")
+        if symbol not in frames:
+            raise KeyError(f"no fixture for {symbol}")
+        df = frames[symbol]
+        local = df.index.tz_localize(None).normalize()
+        mask = (local >= pd.Timestamp(start)) & (local <= pd.Timestamp(end))
+        return df.loc[mask]
+
+    return _history
+
+
+def make_bars(inst, start, end, *, seed: int = 0, start_price: float = 100.0, vol: float = 0.01,
+              drift: float = 0.0003, vendor: str = "synthetic", adjustment_state: str = "raw"):
+    """Synthetic GBM daily bars for `inst` on its real exchange calendar, in canonical form."""
+    import numpy as np
+    import pandas as pd
+
+    from quant.core.calendars import get_calendar
+    from quant.core.time import now
+    from quant.data.store import coerce_bars
+
+    cal = get_calendar(inst.calendar_code)
+    sessions = cal.sessions(start, end)
+    rng = np.random.default_rng(seed)
+    n = len(sessions)
+    rets = rng.normal(drift, vol, n)
+    close = start_price * np.exp(np.cumsum(rets))
+    open_ = np.r_[start_price, close[:-1]] * (1 + rng.normal(0, vol / 4, n))
+    high = np.maximum(open_, close) * (1 + np.abs(rng.normal(0, vol / 2, n)))
+    low = np.minimum(open_, close) * (1 - np.abs(rng.normal(0, vol / 2, n)))
+    volume = np.exp(rng.normal(np.log(1e6), 0.3, n)).round()
+    df = pd.DataFrame(
+        {
+            "instrument_id": inst.instrument_id,
+            "session_date": sessions,
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+            "currency": inst.currency.value,
+            "vendor": vendor,
+            "adjustment_state": adjustment_state,
+            "ts_close_utc": cal.session_closes(start, end).to_numpy(),
+            "ingested_at": pd.Timestamp(now()),
+        }
+    )
+    return coerce_bars(df)
+
+
+class FakeBarsAdapter:
+    """In-memory adapter serving pre-generated series; records every call for assertions."""
+
+    name = "fake"
+
+    def __init__(self, series: dict):
+        from quant.data.adapters.base import FieldMap, RateLimit
+
+        self.series = series
+        self.calls: list[tuple[list[str], object, object]] = []
+        self.rate_limit = RateLimit()
+        self.field_map = FieldMap()
+
+    def capabilities(self):
+        from quant.data.adapters.base import Capability
+
+        return frozenset({Capability.BARS_DAILY})
+
+    def get_bars(self, instruments, start, end, freq: str = "1d"):
+        import pandas as pd
+
+        from quant.core.time import now
+        from quant.data.adapters.base import AdapterResult, empty_bars
+
+        self.calls.append(([i.instrument_id for i in instruments], start, end))
+        frames, errors = [], {}
+        for inst in instruments:
+            full = self.series.get(inst.instrument_id)
+            if full is None:
+                errors[inst.instrument_id] = "no fixture"
+                continue
+            sd = full["session_date"]
+            chunk = full[(sd >= pd.Timestamp(start)) & (sd <= pd.Timestamp(end))]
+            if chunk.empty:
+                errors[inst.instrument_id] = "no data in range"
+                continue
+            chunk = chunk.copy()
+            chunk["vendor"] = self.name
+            chunk["ingested_at"] = pd.Timestamp(now())
+            frames.append(chunk)
+        frame = pd.concat(frames, ignore_index=True) if frames else empty_bars()
+        return AdapterResult(
+            vendor=self.name,
+            frame=frame,
+            errors=errors,
+            requested=[i.instrument_id for i in instruments],
+            params={"start": str(start), "end": str(end), "freq": freq},
+        )
+
+    def get_corporate_actions(self, instruments, start, end):
+        raise NotImplementedError
+
+    def get_macro_series(self, series_ids, start, end):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return None
+
+
+@pytest.fixture
+def catalog():
+    from quant.core.catalog import load_default_catalog
+
+    return load_default_catalog()

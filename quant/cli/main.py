@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from quant import __version__
+from quant.cli.data_cmd import data_app
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -32,6 +33,9 @@ def config(
 
     settings = load_settings(config_file)
     typer.echo(settings.model_dump_json(indent=2))
+
+
+app.add_typer(data_app, name="data")
 
 
 if __name__ == "__main__":  # pragma: no cover

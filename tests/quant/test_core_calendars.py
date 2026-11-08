@@ -128,3 +128,21 @@ def test_cme_group_venues_share_the_globex_calendar():
         assert market.calendar_code == "CMES"
         assert get_calendar(market.calendar_code).is_session(date(2024, 7, 5))
     assert Market.XLON.calendar_code == "XLON"
+
+
+def test_session_closes_vectorised_matches_scalar_across_dst():
+    from quant.core.calendars import latest_complete_session
+
+    xlon = get_calendar("XLON")
+    closes = xlon.session_closes(date(2024, 10, 21), date(2024, 11, 1))
+    assert closes.loc[pd.Timestamp("2024-10-25")] == _utc("2024-10-25 15:30")  # BST
+    assert closes.loc[pd.Timestamp("2024-10-28")] == _utc("2024-10-28 16:30")  # GMT
+    assert str(closes.dtype) == "datetime64[ns, UTC]"
+    for cal_code in ("XNYS", "FX", "CRYPTO"):
+        cal = get_calendar(cal_code)
+        vec = cal.session_closes(date(2024, 3, 4), date(2024, 3, 15))
+        for session, close in vec.items():
+            assert close == cal.session_close(session.date())
+    assert latest_complete_session("XNYS", pd.Timestamp("2024-07-05 19:00", tz="UTC")) == date(2024, 7, 3)
+    assert latest_complete_session("XNYS", pd.Timestamp("2024-07-05 20:00", tz="UTC")) == date(2024, 7, 5)
+    assert latest_complete_session("XNYS", pd.Timestamp("2024-07-06 12:00", tz="UTC")) == date(2024, 7, 5)

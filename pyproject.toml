@@ -73,6 +73,8 @@ markers = [
 filterwarnings = [
   # raised inside exchange_calendars on pandas >= 3.1; not ours to fix
   "ignore:Series.values returning an ndarray that drops timezone information",
+  # raised inside duckdb's .df() on pandas >= 3.1; not ours to fix
+  "ignore:The inplace keyword in DataFrame.drop is deprecated",
 ]
 
 [tool.ruff]
