@@ -51,6 +51,11 @@ quant optimize weights -i AAPL,MSFT,JPM --method hrp --start 2020-01-01 --html w
 quant optimize weights -i AAPL,MSFT,JPM --method bl --view AAPL:0.10@0.5 --market-weights AAPL=0.5,MSFT=0.3,JPM=0.2
 quant optimize frontier -i AAPL,MSFT,JPM --points 10      # long-only frontier from shrunk historical means
 quant optimize size --win-rate 0.55 --payoff 1.8 --trades 60 --entry 100 --stop 95 --capital 100000
+quant risk var -i AAPL,MSFT,JPM --weights AAPL=0.5,MSFT=0.3,JPM=0.2 --alpha 0.99   # VaR family + Kupiec
+quant risk stress -i AAPL,MSFT,JPM --start 2007-01-01 --shock crash:AAPL=-0.3,MSFT=-0.2
+quant risk drawdown AAPL --start 2015-01-01   # or --backtest runs/trend for a saved equity curve
+quant risk correlation -i AAPL,MSFT,JPM --window 63
+quant risk report -i AAPL,MSFT,JPM --html risk.html
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -95,7 +100,11 @@ constraints; min-variance, max-Sharpe, target-return, target-risk and the effici
 Spinu's convex form plus a bounded fallback; Black-Litterman with absolute and relative views; HRP; ex-ante
 and realised vol targeting with lagged leverage; fractional-Kelly sizing with Wilson shrinkage and ordered
 caps; a vectorised periodic rebalance pinned to the engine by an equivalence test; `FixedWeights` strategy;
-`quant optimize`). Next: S11 risk analytics.
+`quant optimize`), **S11 risk** (historical, normal, Student-t, Cornish-Fisher, GARCH filtered-historical and
+Monte Carlo VaR/CVaR with a Kupiec backtest of out-of-sample rolling VaR; dated stress windows from the GFC to
+the 2022 gilt crisis with coverage reported, hypothetical and beta shocks, factor scenarios from estimated
+betas; calm-versus-stress correlation breakdown, diversification and absorption ratios; drawdown episodes,
+ulcer/pain indices, CDaR; an HTML risk report; `quant risk`). Next: S12 paper trading.
 
 ## Module map
 

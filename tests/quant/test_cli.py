@@ -464,3 +464,52 @@ def test_optimize_commands_on_cached_data(monkeypatch, tmp_path):
     assert r.exit_code == 0 and "SIZE" in r.output and "binding" in r.output, r.output
     bad = runner.invoke(app, ["optimize", "weights", "--instruments", "AAPL", "--no-refresh"])
     assert bad.exit_code != 0
+
+
+def test_risk_commands_on_cached_data(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "220")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNAS_MSFT", 2), ("XNYS_JPM", 3)):
+        store.write_bars(
+            make_bars(cat[iid], date(2019, 1, 2), date(2024, 6, 28), seed=seed, vendor="yfinance")
+        )
+    common = [
+        "--instruments",
+        "AAPL,MSFT,JPM",
+        "--start",
+        "2019-01-02",
+        "--end",
+        "2024-06-28",
+        "--no-refresh",
+    ]
+    r = runner.invoke(
+        app, ["risk", "var", *common, "--weights", "AAPL=0.5,MSFT=0.3,JPM=0.2", "--alpha", "0.95"]
+    )
+    assert r.exit_code == 0, r.output
+    assert "historical" in r.output and "Kupiec" in r.output and "filtered_historical" in r.output
+    r = runner.invoke(app, ["risk", "stress", *common, "--shock", "crash:AAPL=-0.3,MSFT=-0.2"])
+    assert r.exit_code == 0, r.output
+    assert "covid_2020" in r.output and "not covered" in r.output and "crash" in r.output
+    r = runner.invoke(
+        app, ["risk", "drawdown", "AAPL", "--start", "2019-01-02", "--end", "2024-06-28", "--no-refresh"]
+    )
+    assert r.exit_code == 0 and "underwater summary" in r.output, r.output
+    r = runner.invoke(app, ["risk", "correlation", *common, "--window", "63"])
+    assert r.exit_code == 0 and "stress minus calm" in r.output, r.output
+    out = tmp_path / "risk.html"
+    r = runner.invoke(app, ["risk", "report", *common, "--html", str(out)])
+    assert r.exit_code == 0, r.output
+    text = out.read_text()
+    assert "Caveats" in text and "Value at Risk" in text and "Historical stress windows" in text
+    bad = runner.invoke(app, ["risk", "var", "--instruments", "AAPL", "--weights", "MSFT=1", "--no-refresh"])
+    assert bad.exit_code != 0
