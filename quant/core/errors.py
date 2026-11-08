@@ -43,5 +43,9 @@ class BrokerError(QuantError):
     """Paper broker failure."""
 
 
+class FXError(QuantError):
+    """Missing or unusable FX rate."""
+
+
 class LiveTradingDisabled(QuantError):
     """Raised whenever code reaches a live-trading path. Live trading is disabled by design."""

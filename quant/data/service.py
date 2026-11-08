@@ -21,8 +21,10 @@ from quant.core.errors import AdapterError, ConfigError
 from quant.core.time import now, to_date, today
 from quant.core.types import Instrument
 from quant.data.adapters.base import Capability, MarketDataAdapter
+from quant.data.corporate_actions import adjust_bars
 from quant.data.lineage import LineageLog, LineageRecord, frame_digest
 from quant.data.store import DuckDBStore, ParquetStore, WriteResult
+from quant.data.validation import DataQualityReport, ValidationConfig, validate_bars
 
 
 @dataclass
@@ -77,10 +79,15 @@ class DataService:
 
     # ------------------------------------------------------------------ adapters
     def _default_adapters(self) -> dict[str, MarketDataAdapter]:
+        from quant.data.adapters.boe import BankOfEnglandAdapter
+        from quant.data.adapters.fred import FREDAdapter
         from quant.data.adapters.yfinance_adapter import YFinanceAdapter
 
+        fred_key = self.settings.fred_api_key.get_secret_value() if self.settings.fred_api_key else None
         return {
             "yfinance": YFinanceAdapter(drop_unfinished_session=self.settings.data.drop_unfinished_session),
+            "fred": FREDAdapter(api_key=fred_key),
+            "boe": BankOfEnglandAdapter(),
         }
 
     def adapter_for(self, capability: Capability | str, vendor: str | None = None) -> MarketDataAdapter:
@@ -130,7 +137,7 @@ class DataService:
         result = adapter.get_bars(insts, start_d, end_d, self.freq)
         writes = self.parquet.write_bars(result.frame, self.freq) if not result.frame.empty else []
         actions = result.extras.get("corporate_actions")
-        n_actions = 0 if actions is None else len(actions)
+        n_actions = self.db.upsert_corporate_actions(actions)
         record = LineageRecord(
             vendor=adapter.name,
             operation="fetch",
@@ -207,14 +214,142 @@ class DataService:
             ranges.append((last + timedelta(days=1), end))
         return ranges
 
-    def _is_stale(self, instrument_id: str, vendor: str) -> bool:
-        meta = self.db.get_series_meta(instrument_id, vendor, self.freq)
+    def _is_stale(self, instrument_id: str, vendor: str, freq: str | None = None) -> bool:
+        meta = self.db.get_series_meta(instrument_id, vendor, freq or self.freq)
         if meta is None or meta.get("last_checked_at") is None:
             return True
         checked = pd.Timestamp(meta["last_checked_at"])
         checked = checked.tz_localize("UTC") if checked.tzinfo is None else checked.tz_convert("UTC")
         ttl = pd.Timedelta(hours=float(self.settings.data.cache_ttl_hours))
         return pd.Timestamp(now()) - checked >= ttl
+
+    # ------------------------------------------------------------------ adjusted bars & validation
+    def get_corporate_actions(
+        self, instruments: Sequence[Instrument | str], vendor: str | None = None, known_by=None
+    ) -> pd.DataFrame:  # noqa: ANN001 - known_by: timestamp-like
+        ids = [self.resolve(i).instrument_id for i in instruments]
+        return self.db.load_corporate_actions(ids, vendor=vendor, known_by=known_by)
+
+    def get_adjusted_bars(
+        self,
+        instruments: Sequence[Instrument | str],
+        start: date | str,
+        end: date | str | None = None,
+        *,
+        as_of: date | str | None = None,
+        vendor: str | None = None,
+        refresh: bool | None = None,
+    ) -> pd.DataFrame:
+        """Bars plus adj_* columns, adjusted only for actions with ex_date <= as_of (default: all)."""
+        bars = self.get_bars(instruments, start, end, vendor=vendor, refresh=refresh)
+        if bars.empty:
+            return adjust_bars(bars, bars)
+        ids = sorted(bars["instrument_id"].unique())
+        actions = self.db.load_corporate_actions(ids, vendor=bars["vendor"].iloc[0])
+        return adjust_bars(bars, actions, as_of=as_of)
+
+    def validate(
+        self,
+        instruments: Sequence[Instrument | str],
+        start: date | str,
+        end: date | str | None = None,
+        *,
+        vendor: str | None = None,
+        refresh: bool | None = False,
+        config: ValidationConfig | None = None,
+    ) -> DataQualityReport:
+        """Data-quality report for cached bars (refresh=False by default: validation never fetches)."""
+        insts = [self.resolve(i) for i in instruments]
+        bars = self.get_bars(insts, start, end, vendor=vendor, refresh=refresh)
+        by_id = {i.instrument_id: i for i in insts}
+        actions = self.db.load_corporate_actions(list(by_id)) if not bars.empty else None
+        report = validate_bars(bars, by_id, actions, config)
+        if not bars.empty:
+            self.lineage.record(
+                LineageRecord(
+                    vendor=bars["vendor"].iloc[0],
+                    operation="validate",
+                    instrument_ids=list(by_id),
+                    rows=len(bars),
+                    diff={iid: {"score": q.score, "grade": q.grade} for iid, q in report.results.items()},
+                )
+            )
+        return report
+
+    # ------------------------------------------------------------------ macro series
+    def macro_vendor_for(self, series_id: str, vendor: str | None = None) -> str:
+        if vendor:
+            return vendor
+        for name in ("fred", "boe"):
+            inst = self.catalog.by_vendor_symbol(name, series_id)
+            if inst is not None and name in self.adapters:
+                return name
+        return self.adapter_for(Capability.MACRO).name
+
+    def fetch_macro(
+        self, series_ids: Sequence[str], start: date, end: date, vendor: str | None = None
+    ) -> FetchReport:
+        vendor_name = self.macro_vendor_for(series_ids[0], vendor)
+        adapter = self.adapter_for(Capability.MACRO, vendor_name)
+        start_d, end_d = to_date(start), to_date(end)
+        result = adapter.get_macro_series(list(series_ids), start_d, end_d)
+        rows = self.db.upsert_macro(result.frame)
+        record = LineageRecord(
+            vendor=adapter.name,
+            operation="fetch_macro",
+            instrument_ids=list(series_ids),
+            params={**result.params},
+            rows=rows,
+            sha256=frame_digest(result.frame) if not result.frame.empty else None,
+            diff={"errors": result.errors},
+        )
+        self.lineage.record(record)
+        for sid in series_ids:
+            cached = self.db.load_macro(sid, adapter.name)
+            self.db.upsert_series_meta(
+                sid,
+                adapter.name,
+                "macro",
+                first_session=None if cached.empty else cached["date"].min().date(),
+                last_session=None if cached.empty else cached["date"].max().date(),
+                rows=len(cached),
+                written=sid in set(result.frame["series_id"]) if not result.frame.empty else False,
+            )
+        return FetchReport(
+            vendor=adapter.name,
+            start=start_d,
+            end=end_d,
+            requested=list(series_ids),
+            rows=rows,
+            errors=result.errors,
+            lineage_id=record.lineage_id,
+        )
+
+    def get_macro(
+        self,
+        series_id: str,
+        start: date | str,
+        end: date | str | None = None,
+        vendor: str | None = None,
+        refresh: bool | None = None,
+    ) -> pd.Series:
+        """A macro series as a date-indexed Series, fetching a missing head/tail like get_bars."""
+        vendor_name = self.macro_vendor_for(series_id, vendor)
+        start_d = to_date(start)
+        end_d = to_date(end) if end is not None else today()
+        if refresh is not False:
+            cached = self.db.load_macro(series_id, vendor_name)
+            if cached.empty:
+                self.fetch_macro([series_id], start_d, end_d, vendor_name)
+            else:
+                first, last = cached["date"].min().date(), cached["date"].max().date()
+                if start_d < first:
+                    self.fetch_macro([series_id], start_d, first - timedelta(days=1), vendor_name)
+                stale = refresh or self._is_stale(series_id, vendor_name, freq="macro")
+                if last < end_d and stale:
+                    self.fetch_macro([series_id], last + timedelta(days=1), end_d, vendor_name)
+        df = self.db.load_macro(series_id, vendor_name, start_d, end_d)
+        return pd.Series(df["value"].to_numpy(), index=pd.DatetimeIndex(df["date"]), name=series_id)
 
     # ------------------------------------------------------------------ introspection
     def cached_series(self, vendor: str | None = None) -> pd.DataFrame:

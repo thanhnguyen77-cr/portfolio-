@@ -23,7 +23,7 @@ def test_defaults():
     assert s.trading.default_broker == "sim"
     assert s.trading.base_currency is Currency.USD
     assert s.trading.cash_policy == "convert_at_fill"
-    assert s.data.adapter_priority == ["yfinance", "stooq"]
+    assert s.data.adapter_priority == ["yfinance", "stooq", "fred", "boe"]
     assert s.fees_file.exists() and s.instruments_file.exists()
     assert s.fred_api_key is None
 

@@ -49,3 +49,30 @@ def test_data_fetch_reports_blocked_vendor_and_records_lineage(monkeypatch, tmp_
     assert cached.exit_code == 0 and "XNAS_AAPL" in cached.output
     lineage = runner.invoke(app, ["data", "lineage"])
     assert lineage.exit_code == 0 and "fetch" in lineage.output
+
+
+def test_data_validate_on_cached_bars(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    bars = make_bars(cat["XNAS_AAPL"], date(2024, 1, 2), date(2024, 12, 31), vendor="yfinance")
+    ParquetStore(tmp_path / "data" / "parquet").write_bars(bars)
+    args = ["data", "validate", "AAPL", "--start", "2024-01-01", "--end", "2024-12-31", "--issues"]
+    result = runner.invoke(app, args)
+    assert result.exit_code == 0, result.output
+    assert "XNAS_AAPL" in result.output and "data quality" in result.output
+
+
+def test_data_macro_blocked_vendor_exits_1(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    result = runner.invoke(app, ["data", "macro", "DGS10", "--start", "2024-07-01", "--end", "2024-07-05"])
+    assert result.exit_code == 1 and "no observations" in result.output

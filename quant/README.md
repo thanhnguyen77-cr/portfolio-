@@ -22,6 +22,8 @@ quant config                             # effective settings, secrets masked
 quant data instruments --market XLON     # the seed catalogue
 quant data fetch AAPL VOD.L --start 2020-01-01   # daily bars into the local Parquet/DuckDB cache
 quant data show VOD.L --tail 5           # pence already converted to pounds
+quant data validate AAPL VOD.L --issues  # gaps, stale closes, outliers, GBX/GBP jumps, splits, dividends
+quant data macro DGS10                   # FRED (no key needed); quant data macro IUDBEDR for Bank Rate (BoE)
 quant data lineage                       # what was fetched, from where, how many rows, content hash
 ```
 
@@ -41,7 +43,9 @@ ruff check quant tests/quant
 
 Built in tested stages; see the repository history. Each stage's status note states what passed, what was
 skipped and known gaps. Completed: **S0 scaffold**, **S1 data core** (adapter contract, yfinance adapter,
-Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`). Next: S2 data quality.
+Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`), **S2 data quality**
+(validation report with grades, corporate actions and as-of adjustment, FX with forward-fill-only alignment,
+FRED and Bank of England macro series). Next: S3 backtest engine.
 
 ## Module map
 

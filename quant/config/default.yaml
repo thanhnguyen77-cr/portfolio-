@@ -11,7 +11,7 @@ trading:
   fx_cost_bps: 2.0
 
 data:
-  adapter_priority: [yfinance, stooq]
+  adapter_priority: [yfinance, stooq, fred, boe]
   cache_ttl_hours: 12
   drop_unfinished_session: true
   default_start: "2000-01-01"

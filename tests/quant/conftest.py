@@ -221,3 +221,102 @@ def catalog():
     from quant.core.catalog import load_default_catalog
 
     return load_default_catalog()
+
+
+# --------------------------------------------------------------------------- S2: anomalies and macro
+
+
+def plant(bars, *, drop_dates=(), stale=None, outlier=None, denomination=None, jump=None, ohlc=None):
+    """Copy of a single-instrument bars frame with planted anomalies.
+
+    drop_dates: sessions to remove (gaps) · stale=(i, n): n equal closes from row i ·
+    outlier=(i, mult): one-day spike at row i · denomination=i: x100 from row i on (GBX<->GBP) ·
+    jump=(i, ratio): persistent ratio from row i on (split-like) · ohlc=i: high below low at row i.
+    """
+    px = ["open", "high", "low", "close"]
+    out = bars.copy().reset_index(drop=True)
+    if drop_dates:
+        out = out[~out["session_date"].dt.date.isin(set(drop_dates))].reset_index(drop=True)
+    if stale is not None:
+        i, n = stale
+        out.loc[i : i + n - 1, px] = float(out.loc[i, "close"])
+    if outlier is not None:
+        i, mult = outlier
+        out.loc[i, px] = out.loc[i, px].astype(float) * mult
+    if denomination is not None:
+        out.loc[denomination:, px] = out.loc[denomination:, px].astype(float) * 100.0
+    if jump is not None:
+        i, ratio = jump
+        out.loc[i:, px] = out.loc[i:, px].astype(float) * ratio
+    if ohlc is not None:
+        out.loc[ohlc, "high"] = float(out.loc[ohlc, "low"]) * 0.9
+    return out
+
+
+def actions_frame(instrument_id: str, rows, vendor: str = "synthetic"):
+    """rows: iterable of (ex_date, action_type, value, currency)."""
+    import pandas as pd
+
+    from quant.core.time import now
+
+    df = pd.DataFrame(rows, columns=["ex_date", "action_type", "value", "currency"])
+    df.insert(0, "instrument_id", instrument_id)
+    df["ex_date"] = pd.to_datetime(df["ex_date"]).astype("datetime64[ns]")
+    df["value"] = df["value"].astype("float64")
+    df["vendor"] = vendor
+    df["recorded_at"] = pd.Timestamp(now())
+    return df
+
+
+class FakeMacroAdapter:
+    """Serves pre-built macro series (series_id -> date-indexed Series); records calls."""
+
+    name = "fakemacro"
+    identifier_key = None
+
+    def __init__(self, series: dict):
+        from quant.data.adapters.base import FieldMap, RateLimit
+
+        self.series = series
+        self.calls: list[tuple[list[str], object, object]] = []
+        self.rate_limit = RateLimit()
+        self.field_map = FieldMap()
+
+    def capabilities(self):
+        from quant.data.adapters.base import Capability
+
+        return frozenset({Capability.MACRO})
+
+    def get_macro_series(self, series_ids, start, end):
+        import pandas as pd
+
+        from quant.data.adapters.base import AdapterResult
+        from quant.data.adapters.fred import _empty_macro, macro_frame
+
+        self.calls.append((list(series_ids), start, end))
+        frames, errors = [], {}
+        for sid in series_ids:
+            s = self.series.get(sid)
+            if s is None:
+                errors[sid] = "no fixture"
+                continue
+            window = s[(s.index >= pd.Timestamp(start)) & (s.index <= pd.Timestamp(end))]
+            if window.empty:
+                errors[sid] = "no data in range"
+                continue
+            frames.append(macro_frame(sid, pd.Series(window.index), pd.Series(window.to_numpy()), self.name))
+        frame = pd.concat(frames, ignore_index=True) if frames else _empty_macro()
+        return AdapterResult(vendor=self.name, frame=frame, errors=errors, requested=list(series_ids),
+                             params={"start": str(start), "end": str(end)})
+
+    def get_bars(self, instruments, start, end, freq="1d"):
+        raise NotImplementedError
+
+    def get_corporate_actions(self, instruments, start, end):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return None

@@ -98,6 +98,51 @@ def cached(config_file: ConfigOption = None) -> None:
     console.print(frame_table(df, title="cached series", max_rows=200))
 
 
+@data_app.command("validate")
+def validate(
+    refs: Annotated[list[str], typer.Argument(help="Instrument ids or symbols.")],
+    start: Annotated[str, typer.Option("--start", "-s")] = "2015-01-01",
+    end: Annotated[str | None, typer.Option("--end", "-e")] = None,
+    refresh: Annotated[bool, typer.Option("--refresh", help="Fetch missing data before validating.")] = False,
+    issues: Annotated[bool, typer.Option("--issues", help="Also list individual issues.")] = False,
+    strict: Annotated[bool, typer.Option("--strict", help="Exit 1 if any instrument grades F.")] = False,
+    config_file: ConfigOption = None,
+) -> None:
+    """Data-quality report for cached bars: gaps, stale closes, outliers, jumps, dividends, volume."""
+    svc = _service(config_file)
+    report = svc.validate(refs, start, end, refresh=True if refresh else False)
+    table = report.to_frame()
+    if table.empty:
+        console.print("[yellow]no cached bars to validate (use --refresh to fetch)[/yellow]")
+        raise typer.Exit(code=1)
+    cols = ["instrument_id", "grade", "score", "bars", "gaps", "stale_days", "outliers", "ohlc_violations",
+            "denomination_changes", "unexplained_jumps", "dividend_warnings", "issues"]
+    console.print(frame_table(table[cols], title="data quality"))
+    if issues and not report.issues_frame().empty:
+        console.print(frame_table(report.issues_frame(), title="issues", max_rows=200))
+    if strict and not report.ok("C"):
+        raise typer.Exit(code=1)
+
+
+@data_app.command("macro")
+def macro(
+    series_id: Annotated[str, typer.Argument(help="Series code, e.g. DGS10 (FRED) or IUDBEDR (BoE).")],
+    start: Annotated[str, typer.Option("--start", "-s")] = "2015-01-01",
+    end: Annotated[str | None, typer.Option("--end", "-e")] = None,
+    vendor: Annotated[str | None, typer.Option("--vendor", help="fred | boe (inferred if omitted)")] = None,
+    tail: Annotated[int, typer.Option("--tail", "-n")] = 10,
+    config_file: ConfigOption = None,
+) -> None:
+    """Fetch (incrementally) and print a macro series."""
+    svc = _service(config_file)
+    series = svc.get_macro(series_id, start, end, vendor=vendor)
+    if series.empty:
+        console.print(f"[yellow]no observations for {series_id}[/yellow]")
+        raise typer.Exit(code=1)
+    df = series.tail(tail).rename_axis("date").reset_index()
+    console.print(frame_table(df, title=f"{series_id} ({len(series)} observations)"))
+
+
 @data_app.command("lineage")
 def lineage(
     limit: Annotated[int, typer.Option("--limit", "-n")] = 20,

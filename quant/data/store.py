@@ -76,6 +76,20 @@ def coerce_bars(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _empty_actions() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "instrument_id": pd.Series(dtype=str),
+            "ex_date": pd.Series(dtype="datetime64[ns]"),
+            "action_type": pd.Series(dtype=str),
+            "value": pd.Series(dtype="float64"),
+            "currency": pd.Series(dtype=object),
+            "vendor": pd.Series(dtype=str),
+            "recorded_at": pd.Series(dtype="datetime64[ns, UTC]"),
+        }
+    )
+
+
 def _empty_bars() -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -320,6 +334,28 @@ _DDL: tuple[str, ...] = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS corporate_actions (
+        instrument_id VARCHAR NOT NULL,
+        ex_date DATE NOT NULL,
+        action_type VARCHAR NOT NULL,
+        value DOUBLE NOT NULL,
+        currency VARCHAR,
+        vendor VARCHAR NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (instrument_id, ex_date, action_type, vendor)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS macro_series (
+        series_id VARCHAR NOT NULL,
+        vendor VARCHAR NOT NULL,
+        date DATE NOT NULL,
+        value DOUBLE,
+        ingested_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (series_id, vendor, date)
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS lineage (
         lineage_id VARCHAR PRIMARY KEY,
         ts TIMESTAMPTZ NOT NULL,
@@ -488,6 +524,100 @@ class DuckDBStore:
             value = meta.get(key)
             meta[key] = None if value is None or pd.isna(value) else pd.Timestamp(value).date()
         return meta
+
+    # corporate actions -----------------------------------------------------
+    def upsert_corporate_actions(self, df: pd.DataFrame | None) -> int:
+        if df is None or df.empty:
+            return 0
+        rows = []
+        for r in df.itertuples(index=False):
+            currency = r.currency if isinstance(r.currency, str) else None
+            rows.append(
+                (
+                    str(r.instrument_id),
+                    pd.Timestamp(r.ex_date).date(),
+                    str(r.action_type),
+                    float(r.value),
+                    currency,
+                    str(r.vendor),
+                    pd.Timestamp(r.recorded_at).to_pydatetime(),
+                )
+            )
+        with self.write() as con:
+            con.executemany("INSERT OR REPLACE INTO corporate_actions VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def load_corporate_actions(
+        self,
+        instrument_ids: Sequence[str],
+        vendor: str | None = None,
+        known_by: pd.Timestamp | None = None,
+    ) -> pd.DataFrame:
+        """Actions for the instruments; `known_by` keeps only rows recorded at or before that time."""
+        ids = list(instrument_ids)
+        if not ids:
+            return _empty_actions()
+        sql = f"SELECT * FROM corporate_actions WHERE instrument_id IN ({', '.join('?' * len(ids))})"
+        params: list[Any] = list(ids)
+        if vendor:
+            sql += " AND vendor = ?"
+            params.append(vendor)
+        if known_by is not None:
+            sql += " AND recorded_at <= ?"
+            params.append(pd.Timestamp(known_by).to_pydatetime())
+        df = self.query(sql + " ORDER BY instrument_id, ex_date, action_type", params)
+        if df.empty:
+            return _empty_actions()
+        df["ex_date"] = pd.to_datetime(df["ex_date"]).astype("datetime64[ns]")
+        df["recorded_at"] = pd.to_datetime(df["recorded_at"], utc=True).astype("datetime64[ns, UTC]")
+        df["value"] = df["value"].astype("float64")
+        df["currency"] = pd.Series([c if isinstance(c, str) else None for c in df["currency"]], dtype=object)
+        return df.reset_index(drop=True)
+
+    # macro series ----------------------------------------------------------
+    def upsert_macro(self, df: pd.DataFrame | None) -> int:
+        if df is None or df.empty:
+            return 0
+        rows = [
+            (
+                str(r.series_id),
+                str(r.vendor),
+                pd.Timestamp(r.date).date(),
+                None if pd.isna(r.value) else float(r.value),
+                pd.Timestamp(r.ingested_at).to_pydatetime(),
+            )
+            for r in df.itertuples(index=False)
+        ]
+        with self.write() as con:
+            con.executemany("INSERT OR REPLACE INTO macro_series VALUES (?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def load_macro(
+        self, series_id: str, vendor: str | None = None, start: date | None = None, end: date | None = None
+    ) -> pd.DataFrame:
+        sql = "SELECT * FROM macro_series WHERE series_id = ?"
+        params: list[Any] = [series_id]
+        if vendor:
+            sql += " AND vendor = ?"
+            params.append(vendor)
+        if start is not None:
+            sql += " AND date >= ?"
+            params.append(start)
+        if end is not None:
+            sql += " AND date <= ?"
+            params.append(end)
+        df = self.query(sql + " ORDER BY date", params)
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["date"]).astype("datetime64[ns]")
+            df["value"] = df["value"].astype("float64")
+        return df
+
+    def macro_last_date(self, series_id: str, vendor: str) -> date | None:
+        df = self.query(
+            "SELECT max(date) AS d FROM macro_series WHERE series_id = ? AND vendor = ?", [series_id, vendor]
+        )
+        value = df["d"].iloc[0]
+        return None if value is None or pd.isna(value) else pd.Timestamp(value).date()
 
     # parquet view ----------------------------------------------------------
     def register_bars_view(self, parquet_root: Path | str, name: str = "bars", freq: str = "1d") -> bool:
