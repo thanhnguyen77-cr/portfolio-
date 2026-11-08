@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -445,6 +446,114 @@ class DataService:
         if as_of is not None:
             series = series[series["session_date"] <= pd.Timestamp(to_date(as_of))]
         return None if series.empty else float(series["close"].iloc[-1])
+
+    # ------------------------------------------------------------------ factors
+    def build_factor_returns(
+        self,
+        instruments: Sequence[Instrument | str],
+        start: date | str,
+        end: date | str | None = None,
+        *,
+        factors: Sequence[str] = ("momentum", "low_vol", "size", "value", "quality"),
+        rebalance: str = "monthly",
+        n_quantiles: int = 5,
+        sector_neutral: bool = False,
+        refresh: bool | None = None,
+    ):  # noqa: ANN201 - FactorReturns
+        """Long-short factor returns over cached data. Inputs that are missing are skipped and reported."""
+        from quant.factors import (
+            factor_returns,
+            fundamental_characteristics,
+            price_characteristics,
+            rank_normalise,
+        )
+        from quant.factors.construction import factor_scores
+        from quant.fundamental import StatementSet, compute_ratios
+
+        insts = [self.resolve(i) for i in instruments]
+        ids = [i.instrument_id for i in insts]
+        start_d = to_date(start)
+        end_d = to_date(end) if end is not None else today()
+        bars = self.get_adjusted_bars(insts, start_d - timedelta(days=420), end_d, refresh=refresh)
+        if bars.empty:
+            raise ConfigError("no cached bars for the requested instruments")
+        closes = bars.pivot(index="session_date", columns="instrument_id", values="adj_close").sort_index()
+        notes: list[str] = []
+        wanted = list(factors)
+        stmts = {iid: StatementSet.from_rows(self.db.load_fundamentals([iid]), iid) for iid in ids}
+        with_fund = [iid for iid, s in stmts.items() if not s.rows.empty]
+        if any(f in wanted for f in ("value", "quality")) and len(with_fund) < 2 * n_quantiles:
+            notes.append(
+                f"value/quality skipped: cached fundamentals for {len(with_fund)} instrument(s) only"
+            )
+            wanted = [f for f in wanted if f not in ("value", "quality")]
+        currencies = {i.currency.value for i in insts}
+        if "size" in wanted and len(currencies) > 1:
+            notes.append(
+                f"size skipped: mixed currencies {sorted(currencies)} (market caps not comparable without FX)"
+            )
+            wanted = [f for f in wanted if f != "size"]
+        if "size" in wanted and not with_fund:
+            notes.append("size skipped: no shares outstanding in cached fundamentals")
+            wanted = [f for f in wanted if f != "size"]
+        sectors = {i.instrument_id: (i.sector or "unknown") for i in insts} if sector_neutral else None
+        missing_px = [iid for iid in ids if iid not in closes.columns]
+        if missing_px:
+            notes.append(f"no price data for {missing_px}")
+
+        def shares_at(as_of: date) -> dict[str, float]:
+            out: dict[str, float] = {}
+            for iid, s in stmts.items():
+                v = s.as_of(as_of).ttm("shares_outstanding") or s.as_of(as_of).ttm("shares_diluted")
+                if v:
+                    out[iid] = float(v)
+            return out
+
+        def ratios_fn(iid: str, as_of: date):  # noqa: ANN202
+            s = stmts.get(iid)
+            if s is None or s.rows.empty or iid not in closes.columns:
+                return None
+            px = closes.loc[: pd.Timestamp(as_of), iid].dropna()
+            return compute_ratios(s, price=float(px.iloc[-1]) if len(px) else None, as_of=as_of)
+
+        def score_fn(t: pd.Timestamp) -> pd.DataFrame:
+            as_of = t.date()
+            raw = price_characteristics(closes, t, shares=shares_at(as_of) if "size" in wanted else None)
+            if any(f in wanted for f in ("value", "quality")):
+                raw = raw.join(fundamental_characteristics(with_fund, as_of, ratios_fn), how="left")
+            norm = rank_normalise(raw.drop(columns=["price"]), groups=sectors)
+            return factor_scores(norm, wanted)
+
+        fr = factor_returns(
+            closes,
+            score_fn,
+            factors=wanted,
+            start=start_d,
+            end=end_d,
+            rebalance=rebalance,
+            n_quantiles=n_quantiles,
+        )
+        fr.notes = notes + fr.notes
+        return fr
+
+    def factor_file(self, name: str) -> Path:
+        return self.settings.paths.data_dir / "factors" / f"{name}.parquet"
+
+    def save_factor_returns(self, name: str, returns: pd.DataFrame, notes: Sequence[str] = ()) -> Path:
+        path = self.factor_file(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        out = returns.copy()
+        out.index.name = "date"
+        out.reset_index().to_parquet(path, index=False)
+        path.with_suffix(".notes.txt").write_text("\n".join(notes), encoding="utf-8")
+        return path
+
+    def load_factor_returns(self, name: str) -> pd.DataFrame:
+        path = self.factor_file(name)
+        if not path.exists():
+            raise ConfigError(f"no saved factor returns named {name!r} (looked in {path.parent})")
+        df = pd.read_parquet(path)
+        return df.set_index(pd.DatetimeIndex(pd.to_datetime(df["date"]))).drop(columns=["date"])
 
     # ------------------------------------------------------------------ universes
     def universe(self, name: str) -> PITUniverse:

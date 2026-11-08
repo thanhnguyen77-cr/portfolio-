@@ -39,6 +39,9 @@ quant fundamentals fetch AAPL MSFT       # statements + earnings dates (QUANT_SE
 quant fundamentals ratios AAPL --as-of 2024-06-28   # only what had been filed by that date
 quant fundamentals dcf AAPL --growth 0.06 --terminal 0.025 --beta 1.2
 quant fundamentals scores sp500          # percentile ranks across a stored universe (descriptive)
+quant factors build ftse_factors --universe ftse100 --start 2018-01-01 --sector-neutral
+quant factors exposures runs/trend --factors ftse_factors --rf 0.04   # a backtest --out dir, or an instrument
+quant factors kenfrench --file ff5_daily # US Fama-French factors (network)
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -70,7 +73,10 @@ Engle-Granger/Johansen, GARCH, PCA/absorption ratio, OLS with HAC and diagnostic
 `quant analyze`), **S7 fundamentals** (point-in-time statements with period end *and* filing date from yfinance
 (estimated lag, flagged) or SEC EDGAR companyfacts (true dates); ratios on a shared basis, FCFF DCF with WACC and
 a sensitivity grid, comparables, cross-sectional quality/value/growth scores, earnings surprise and SUE;
-`quant fundamentals`). Next: S8 factors.
+`quant fundamentals`), **S8 factors** (12-1 momentum, low-vol, size, point-in-time value and quality
+characteristics; rank-normalisation with optional sector neutrality; dollar-neutral quantile long-short factor
+returns with drift between monthly rebalances; HAC exposures with injectable risk-free rate; exact arithmetic
+attribution; Ken French loader; `quant factors`). Next: S9 macro.
 
 ## Module map
 

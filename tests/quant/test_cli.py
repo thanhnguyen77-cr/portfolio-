@@ -273,3 +273,82 @@ def test_fundamentals_commands_on_cached_data(monkeypatch, tmp_path):
     assert missing.exit_code == 1 and "no cached statements" in missing.output
     blocked = runner.invoke(app, ["fundamentals", "fetch", "XOM"])
     assert blocked.exit_code == 1 and "blocked" in blocked.output
+
+
+def test_factors_build_and_exposures_cli(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import DuckDBStore, ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    ids = [
+        "XNAS_AAPL",
+        "XNAS_MSFT",
+        "XNYS_JPM",
+        "XNYS_XOM",
+        "XNYS_SPY",
+        "XNYS_IWM",
+        "XNYS_GLD",
+        "XNAS_TLT",
+        "XNYS_LQD",
+        "XNYS_HYG",
+    ]
+    for k, iid in enumerate(ids):
+        store.write_bars(
+            make_bars(cat[iid], date(2021, 1, 4), date(2024, 6, 28), seed=200 + k, vendor="yfinance")
+        )
+    db = DuckDBStore(tmp_path / "data" / "quant.duckdb")
+    db.migrate()
+    import pandas as pd
+
+    from quant.universe.pit import PITUniverse
+
+    PITUniverse(db, "demo").import_intervals(
+        pd.DataFrame({"instrument_id": ids, "effective_from": ["2020-01-01"] * len(ids)}), "test"
+    )
+    built = runner.invoke(
+        app,
+        [
+            "factors",
+            "build",
+            "demo_factors",
+            "--universe",
+            "demo",
+            "--start",
+            "2022-06-01",
+            "--end",
+            "2024-06-28",
+            "--factors",
+            "momentum,low_vol",
+            "--no-refresh",
+        ],
+    )
+    assert built.exit_code == 0, built.output
+    assert "momentum" in built.output and (tmp_path / "data" / "factors" / "demo_factors.parquet").exists()
+    exp = runner.invoke(
+        app,
+        [
+            "factors",
+            "exposures",
+            "AAPL",
+            "--factors",
+            "demo_factors",
+            "--start",
+            "2022-06-01",
+            "--end",
+            "2024-06-28",
+        ],
+    )
+    assert exp.exit_code == 0, exp.output
+    assert "alpha" in exp.output and "attribution" in exp.output
+    missing = runner.invoke(app, ["factors", "exposures", "AAPL", "--factors", "nope"])
+    assert missing.exit_code != 0
+    kf = runner.invoke(app, ["factors", "kenfrench"])
+    assert kf.exit_code == 1 and "download failed" in kf.output
