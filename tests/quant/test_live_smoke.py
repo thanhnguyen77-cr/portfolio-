@@ -50,3 +50,17 @@ def test_live_wikipedia_constituents_shapes():
     assert sp.changes is None  # the changes table is gone from the page; reconstruction needs an import
     ftse = load_snapshot("ftse100")
     assert 95 <= len(ftse.members) <= 105
+
+
+def test_live_alpaca_market_data():
+    """Needs Alpaca keys: from QUANT_ALPACA_* or injected by a proxy for data.alpaca.markets."""
+    import os
+
+    from quant.data.adapters.alpaca_data import AlpacaDataAdapter
+
+    key = os.environ.get("QUANT_ALPACA_API_KEY", "proxy-injected")
+    secret = os.environ.get("QUANT_ALPACA_SECRET_KEY", "proxy-injected")
+    cat = load_default_catalog()
+    res = AlpacaDataAdapter(key, secret).get_bars([cat["XNAS_AAPL"], cat["XNYS_JPM"]], START, END)
+    assert res.errors == {}, res.errors
+    assert len(res.frame) >= 10 and (res.frame["adjustment_state"] == "raw").all()

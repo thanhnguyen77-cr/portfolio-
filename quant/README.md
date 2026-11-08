@@ -189,8 +189,10 @@ shown to make money, because that was never the claim.
   fails with that message; the Bank of England export throttles bursts of requests with an HTML error page
   (the adapter retries three times, then reports it); the Companies House adapter indexes filings but does
   not parse iXBRL accounts;
-  Nasdaq Data Link rejects anonymous requests (HTTP 403), so it needs a key; Alpaca, Polygon, Tiingo, NDL
-  and Companies House have been exercised only against recorded fixtures (they need API keys).
+  Nasdaq Data Link rejects anonymous requests (HTTP 403), so it needs a key. Alpaca market data was verified
+  live on 2026-11-08 with a paper key (IEX feed, raw daily bars for AAPL, MSFT and JPM parsed cleanly);
+  the Alpaca paper-trading broker was not exercised live. Polygon, Tiingo, NDL and Companies House have
+  been exercised only against recorded fixtures (they need API keys).
 - FX conversion uses the vendor's ~17:00 New York daily fix for London 16:30 closes (documented in
   `quant/data/fx.py`); it is forward-filled, never backfilled.
 - Fee and levy rates live in `quant/config/fees.yaml` with `verified` flags. The current PTM levy amount and
