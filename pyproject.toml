@@ -75,6 +75,8 @@ filterwarnings = [
   "ignore:Series.values returning an ndarray that drops timezone information",
   # raised inside duckdb's .df() on pandas >= 3.1; not ours to fix
   "ignore:The inplace keyword in DataFrame.drop is deprecated",
+  # statsmodels Johansen casts complex eigenvalues; upstream
+  "ignore:Casting complex values to real discards the imaginary part",
 ]
 
 [tool.ruff]

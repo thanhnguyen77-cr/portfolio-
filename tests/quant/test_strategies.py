@@ -88,3 +88,54 @@ def test_buy_and_hold_waits_for_prices_and_trades_once(catalog):
     res = Backtest(cfg, strat, bars, catalog, fx=fx).run()
     assert len(res.fills) == 2 and res.orders["created_session"].nunique() == 1
     assert strat.describe()["params"]["weights"] == {"XNAS_AAPL": 0.6, "XLON_VOD": 0.4}
+
+
+def test_pairs_strategy_trades_a_planted_cointegrated_pair(catalog):
+    from datetime import date as _date
+
+    from quant.core.errors import BacktestError
+    from quant.strategies import PairsCointegration
+
+    s, e = _date(2021, 1, 4), _date(2024, 6, 28)
+    base_y = make_bars(catalog["XNAS_AAPL"], s, e, seed=81)
+    base_x = make_bars(catalog["XNAS_MSFT"], s, e, seed=82)
+    n = len(base_x)
+    rng = np.random.default_rng(83)
+    x_path = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, n)))
+    noise = np.zeros(n)
+    for i in range(1, n):
+        noise[i] = 0.8 * noise[i - 1] + rng.normal(0, 1.5)
+    y_path = 2.0 * x_path + 10.0 + noise
+
+    def _replace(bars, path):
+        out = bars.copy()
+        factor = path / out["close"].to_numpy()
+        for col in ("open", "high", "low", "close"):
+            out[col] = out[col].to_numpy() * factor
+        return out
+
+    bars = pd.concat([_replace(base_y, y_path), _replace(base_x, x_path)])
+    strat = PairsCointegration(["XNAS_AAPL", "XNAS_MSFT"], lookback=120, z_window=40, entry_z=1.5, exit_z=0.3)
+    cfg = BacktestConfig(
+        start=s,
+        end=e,
+        initial_cash=1_000_000,
+        fractional_shares=True,
+        allow_short=True,
+        max_gross_leverage=1.0,
+    )
+    res = Backtest(cfg, strat, bars, catalog).run()
+    assert len(res.fills) >= 4 and set(res.fills["side"]) == {"buy", "sell"}
+    assert (
+        res.equity["gross_exposure"].max() <= 1.10
+    )  # cap applies at decision time; prices drift until rebalance
+    assert (res.events["type"] == "borrow").any()  # shorts cost borrow
+    with pytest.raises(BacktestError, match="allow_short"):
+        Backtest(
+            cfg.model_copy(update={"allow_short": False}),
+            PairsCointegration(["XNAS_AAPL", "XNAS_MSFT"], lookback=120, z_window=40, entry_z=1.5),
+            bars,
+            catalog,
+        ).run()
+    with pytest.raises(ValueError):
+        PairsCointegration(["XNAS_AAPL"])

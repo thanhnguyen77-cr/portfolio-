@@ -181,3 +181,38 @@ def test_backtest_run_cli_with_robustness(monkeypatch, tmp_path):
     assert out.exists() and (tmp_path / "run" / "result.json").exists()
     bad = runner.invoke(app, ["backtest", "run", "nope", "--instruments", "AAPL", "--no-refresh"])
     assert bad.exit_code != 0
+
+
+def test_analyze_commands_on_cached_bars(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNYS_JPM", 2)):
+        store.write_bars(
+            make_bars(cat[iid], date(2019, 1, 2), date(2024, 6, 28), seed=seed, vendor="yfinance")
+        )
+    common = ["--start", "2019-01-02", "--end", "2024-06-28", "--no-refresh"]
+    checks = {
+        ("indicators", "AAPL"): "rsi14",
+        ("levels", "AAPL"): "level",
+        ("regime", "AAPL", "--markov"): "risk_",
+        ("stationarity", "AAPL"): "verdict",
+        ("cointegration", "AAPL", "JPM"): "hedge_ratio",
+        ("garch", "AAPL", "--dist", "normal"): "persistence",
+        ("pca", "AAPL", "JPM"): "pc1",
+    }
+    for args, needle in checks.items():
+        res = runner.invoke(app, ["analyze", *args, *common])
+        assert res.exit_code == 0, (args, res.output)
+        assert needle in res.output, (args, res.output)
+    missing = runner.invoke(app, ["analyze", "indicators", "XOM", *common])
+    assert missing.exit_code == 1 and "no bars" in missing.output
