@@ -356,6 +356,36 @@ _DDL: tuple[str, ...] = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS universe_membership (
+        universe VARCHAR NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        effective_from DATE NOT NULL,
+        effective_to DATE,
+        source VARCHAR NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (universe, instrument_id, effective_from)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS universe_snapshots (
+        universe VARCHAR NOT NULL,
+        as_of DATE NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        source VARCHAR NOT NULL,
+        recorded_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (universe, as_of, instrument_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS universe_meta (
+        universe VARCHAR PRIMARY KEY,
+        quality VARCHAR NOT NULL,
+        source VARCHAR,
+        history_start DATE,
+        updated_at TIMESTAMPTZ NOT NULL
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS lineage (
         lineage_id VARCHAR PRIMARY KEY,
         ts TIMESTAMPTZ NOT NULL,
@@ -487,6 +517,30 @@ class DuckDBStore:
     def list_instruments(self) -> list[Instrument]:
         df = self.query("SELECT * FROM instruments ORDER BY instrument_id")
         return [self._row_to_instrument(r) for r in df.to_dict("records")]
+
+    # symbol history --------------------------------------------------------
+    def add_symbol_alias(
+        self,
+        instrument_id: str,
+        vendor: str,
+        symbol: str,
+        valid_from: date | None = None,
+        valid_to: date | None = None,
+    ) -> None:
+        """Record that `symbol` referred to `instrument_id` at `vendor` (renames, reused tickers)."""
+        with self.write() as con:
+            con.execute(
+                "INSERT INTO symbol_history VALUES (?, ?, ?, ?, ?, ?)",
+                [instrument_id, vendor, symbol.upper(), valid_from or date(1970, 1, 1), valid_to, now()],
+            )
+
+    def lookup_alias(self, vendor: str, symbol: str) -> str | None:
+        df = self.query(
+            "SELECT instrument_id FROM symbol_history WHERE vendor = ? AND symbol = ? "
+            "ORDER BY recorded_at DESC LIMIT 1",
+            [vendor, symbol.upper()],
+        )
+        return None if df.empty else str(df["instrument_id"].iloc[0])
 
     # series metadata -------------------------------------------------------
     def upsert_series_meta(

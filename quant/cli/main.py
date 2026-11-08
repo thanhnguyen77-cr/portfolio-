@@ -9,6 +9,7 @@ import typer
 
 from quant import __version__
 from quant.cli.data_cmd import data_app
+from quant.cli.universe_cmd import screen, universe_app
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -36,6 +37,8 @@ def config(
 
 
 app.add_typer(data_app, name="data")
+app.add_typer(universe_app, name="universe")
+app.command("screen")(screen)
 
 
 if __name__ == "__main__":  # pragma: no cover

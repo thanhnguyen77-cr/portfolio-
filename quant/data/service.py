@@ -7,7 +7,7 @@ series has not been checked within `data.cache_ttl_hours`. Every fetch leaves a 
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
@@ -25,6 +25,7 @@ from quant.data.corporate_actions import adjust_bars
 from quant.data.lineage import LineageLog, LineageRecord, frame_digest
 from quant.data.store import DuckDBStore, ParquetStore, WriteResult
 from quant.data.validation import DataQualityReport, ValidationConfig, validate_bars
+from quant.universe.pit import PITUniverse
 
 
 @dataclass
@@ -350,6 +351,140 @@ class DataService:
                     self.fetch_macro([series_id], last + timedelta(days=1), end_d, vendor_name)
         df = self.db.load_macro(series_id, vendor_name, start_d, end_d)
         return pd.Series(df["value"].to_numpy(), index=pd.DatetimeIndex(df["date"]), name=series_id)
+
+    # ------------------------------------------------------------------ universes
+    def universe(self, name: str) -> PITUniverse:
+        return PITUniverse(self.db, name)
+
+    def build_universe(
+        self,
+        name: str,
+        *,
+        html: str | None = None,
+        changes_html: str | None = None,
+        as_of: date | None = None,
+        reconstruct: bool = True,
+        expected_rows: tuple[int, int] | None = None,
+        source=None,
+        renames: Mapping[str, str] | None = None,
+    ) -> tuple[PITUniverse, dict[str, Any]]:  # noqa: ANN001 - source: WikipediaSource
+        """Fetch constituents, register instruments, record a snapshot and (S&P) reconstruct history."""
+        from quant.universe.constituents import UNIVERSES, load_snapshot, members_to_instruments
+
+        snap = load_snapshot(
+            name, source, html=html, changes_html=changes_html, as_of=as_of, expected_rows=expected_rows
+        )
+        spec = UNIVERSES[name]
+        instruments = members_to_instruments(snap.members, spec, self.catalog)
+        self.register(instruments)
+        ids = [i.instrument_id for i in instruments]
+        uni = self.universe(name)
+        delta = uni.add_snapshot(snap.as_of, ids, source=f"wikipedia:{snap.html_sha256[:12]}")
+        info: dict[str, Any] = {
+            "members": len(ids),
+            "added": list(delta.added),
+            "removed": list(delta.removed),
+            "html_sha256": snap.html_sha256,
+            "notes": list(snap.notes),
+            "reconstructed_intervals": 0,
+        }
+        if reconstruct and snap.changes is not None and not snap.changes.empty:
+            by_symbol = {i.symbol: i.instrument_id for i in instruments}
+            ch = snap.changes.copy()
+            aliases = dict(renames or {})
+            ch["added_id"] = ch["added"].map(
+                lambda s: self._resolve_or_create_us(s, spec.market, by_symbol, aliases)
+            )
+            ch["removed_id"] = ch["removed"].map(
+                lambda s: self._resolve_or_create_us(s, spec.market, by_symbol, aliases)
+            )
+            info["reconstructed_intervals"] = uni.reconstruct_from_changes(
+                ids, snap.as_of, ch, source="wikipedia_changes"
+            )
+        self.lineage.record(
+            LineageRecord(
+                vendor="wikipedia",
+                operation="universe",
+                instrument_ids=ids,
+                rows=len(ids),
+                sha256=snap.html_sha256,
+                params={"universe": name, "as_of": str(snap.as_of)},
+                diff={k: v for k, v in info.items() if k != "notes"},
+            )
+        )
+        info["quality"] = uni.quality()
+        return uni, info
+
+    def _resolve_or_create_us(self, symbol, market, by_symbol, aliases=None):  # noqa: ANN001
+        if not isinstance(symbol, str) or not symbol:
+            return None
+        original = symbol
+        symbol = (aliases or {}).get(symbol, symbol)
+        if symbol in by_symbol:
+            if original != symbol and self.db.lookup_alias("yahoo", original) is None:
+                self.db.add_symbol_alias(by_symbol[symbol], "yahoo", original)
+            return by_symbol[symbol]
+        alias_hit = self.db.lookup_alias("yahoo", symbol)
+        if alias_hit is not None:
+            by_symbol[symbol] = alias_hit
+            return alias_hit
+        existing = self.catalog.by_vendor_symbol("yahoo", symbol) or next(
+            iter(self.catalog.by_symbol(symbol)), None
+        )
+        if existing is not None:
+            by_symbol[symbol] = existing.instrument_id
+            return existing.instrument_id
+        inst = Instrument(
+            symbol=symbol,
+            asset_class="equity",
+            market=market,
+            currency="USD",
+            country="US",
+            stamp_duty_class="exempt",
+            identifiers={"yahoo": symbol},
+            notes="former index member from the changes table; may be delisted or renamed",
+        )
+        self.register([inst])
+        by_symbol[symbol] = inst.instrument_id
+        return inst.instrument_id
+
+    def screen(
+        self,
+        instruments: Sequence[Instrument | str],
+        start: date | str,
+        end: date | str | None = None,
+        *,
+        config=None,
+        refresh: bool | None = None,
+        validate: bool = True,
+    ) -> pd.DataFrame:  # noqa: ANN001 - config: ScreenConfig
+        """Liquidity / volatility / data-quality screen over cached bars (fetching per `refresh`)."""
+        from quant.data.fx import FXRates
+        from quant.universe.screen import screen_universe
+
+        insts = [self.resolve(i) for i in instruments]
+        bars = self.get_bars(insts, start, end, refresh=refresh)
+        base = self.settings.trading.base_currency.value
+        fx = None
+        foreign = sorted({i.currency.value for i in insts} - {base})
+        if foreign:
+            needed = {frozenset({base, f}) for f in foreign}
+            pairs = [
+                p
+                for p in self.catalog.filter(asset_class="fx")
+                if frozenset({p.symbol[:3], p.symbol[3:]}) in needed
+            ]
+            fx_bars = self.get_bars(pairs, start, end, refresh=refresh) if pairs else bars.iloc[0:0]
+            fx = FXRates.from_bars(fx_bars, self.catalog)
+        dq = validate_bars(bars, {i.instrument_id: i for i in insts}) if validate and not bars.empty else None
+        return screen_universe(
+            bars,
+            {i.instrument_id: i for i in insts},
+            base_currency=base,
+            fx=fx,
+            data_quality=dq,
+            config=config,
+        )
 
     # ------------------------------------------------------------------ introspection
     def cached_series(self, vendor: str | None = None) -> pd.DataFrame:

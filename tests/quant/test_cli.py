@@ -76,3 +76,53 @@ def test_data_macro_blocked_vendor_exits_1(monkeypatch, tmp_path):
     monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
     result = runner.invoke(app, ["data", "macro", "DGS10", "--start", "2024-07-01", "--end", "2024-07-05"])
     assert result.exit_code == 1 and "no observations" in result.output
+
+
+def test_universe_import_show_and_screen_offline(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    csv = tmp_path / "members.csv"
+    csv.write_text("instrument_id,effective_from,effective_to\nXNAS_AAPL,2020-01-01,\nXNYS_JPM,2020-01-01,\n")
+    res = runner.invoke(app, ["universe", "import", "demo", str(csv), "--complete"])
+    assert res.exit_code == 0, res.output
+    assert "pit_complete" in res.output
+    show = runner.invoke(app, ["universe", "show", "demo", "--as-of", "2024-06-01"])
+    assert show.exit_code == 0 and "XNAS_AAPL" in show.output and "2 members" in show.output
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNYS_JPM", 2)):
+        store.write_bars(
+            make_bars(cat[iid], date(2024, 1, 2), date(2024, 12, 31), seed=seed, vendor="yfinance")
+        )
+    out = tmp_path / "screen.html"
+    scr = runner.invoke(
+        app,
+        [
+            "screen",
+            "demo",
+            "--start",
+            "2024-01-02",
+            "--end",
+            "2024-12-31",
+            "--no-refresh",
+            "--html",
+            str(out),
+        ],
+    )
+    assert scr.exit_code == 0, scr.output
+    assert "screen (" in scr.output and out.exists() and "Caveats" in out.read_text()
+
+
+def test_universe_build_without_network_fails_cleanly(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    res = runner.invoke(app, ["universe", "build", "ftse100"])
+    assert res.exit_code == 1 and "could not build ftse100" in res.output

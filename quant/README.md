@@ -25,6 +25,9 @@ quant data show VOD.L --tail 5           # pence already converted to pounds
 quant data validate AAPL VOD.L --issues  # gaps, stale closes, outliers, GBX/GBP jumps, splits, dividends
 quant data macro DGS10                   # FRED (no key needed); quant data macro IUDBEDR for Bank Rate (BoE)
 quant data lineage                       # what was fetched, from where, how many rows, content hash
+quant universe build sp500               # constituents + reconstructed history (quality flag reported)
+quant universe show ftse100 --as-of 2024-06-28
+quant screen ftse100 --start 2023-01-01 --html screen.html   # liquidity / vol / data-quality ranking, not a forecast
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -45,7 +48,10 @@ Built in tested stages; see the repository history. Each stage's status note sta
 skipped and known gaps. Completed: **S0 scaffold**, **S1 data core** (adapter contract, yfinance adapter,
 Parquet/DuckDB store with idempotent appends, lineage, incremental `DataService`), **S2 data quality**
 (validation report with grades, corporate actions and as-of adjustment, FX with forward-fill-only alignment,
-FRED and Bank of England macro series). Next: S3 backtest engine.
+FRED and Bank of England macro series), **S3 backtest engine** (event-driven, multi-currency, next-open fills,
+itemised costs incl. UK/US transaction taxes, look-ahead guards), **S4 universes** (Wikipedia constituents with
+shape checks, point-in-time membership with snapshot accumulation and S&P change-table reconstruction,
+coverage, evidence-based screen, HTML report builder). Next: S5 backtest robustness and tearsheet.
 
 ## Module map
 

@@ -1,0 +1,8 @@
+<section class="caveats">
+<h2 style="border:none;margin-top:0">Caveats</h2>
+<p class="meta">This report describes the past under stated assumptions. It is not a claim that anything is profitable or error-free.</p>
+<ul>
+{% for c in caveats %}<li>{{ c }}</li>{% endfor %}
+{% if not caveats %}<li>No run-specific caveats were supplied; the general limitations in the README still apply.</li>{% endif %}
+</ul>
+</section>
