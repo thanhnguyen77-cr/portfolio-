@@ -458,9 +458,23 @@ def test_optimize_commands_on_cached_data(monkeypatch, tmp_path):
     assert r.exit_code == 0 and "target_return" in r.output, r.output
     r = runner.invoke(
         app,
-        ["optimize", "size", "--win-rate", "0.55", "--payoff", "1.8", "--trades", "60", "--entry", "100",
-         "--stop", "95", "--capital", "100000"],
-    )  # fmt: skip
+        [
+            "optimize",
+            "size",
+            "--win-rate",
+            "0.55",
+            "--payoff",
+            "1.8",
+            "--trades",
+            "60",
+            "--entry",
+            "100",
+            "--stop",
+            "95",
+            "--capital",
+            "100000",
+        ],
+    )
     assert r.exit_code == 0 and "SIZE" in r.output and "binding" in r.output, r.output
     bad = runner.invoke(app, ["optimize", "weights", "--instruments", "AAPL", "--no-refresh"])
     assert bad.exit_code != 0
@@ -513,3 +527,105 @@ def test_risk_commands_on_cached_data(monkeypatch, tmp_path):
     assert "Caveats" in text and "Value at Risk" in text and "Historical stress windows" in text
     bad = runner.invoke(app, ["risk", "var", "--instruments", "AAPL", "--weights", "MSFT=1", "--no-refresh"])
     assert bad.exit_code != 0
+
+
+def test_paper_commands_on_cached_data(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "220")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNAS_MSFT", 2)):
+        store.write_bars(
+            make_bars(cat[iid], date(2023, 6, 1), date(2024, 6, 28), seed=seed, vendor="yfinance")
+        )
+    r = runner.invoke(app, ["paper", "init", "demo", "--cash", "500000", "--as-of", "2024-06-18"])
+    assert r.exit_code == 0 and "created paper account" in r.output, r.output
+    assert runner.invoke(app, ["paper", "init", "demo"]).exit_code != 0
+    r = runner.invoke(app, ["paper", "accounts"])
+    assert r.exit_code == 0 and "demo" in r.output
+    run_args = [
+        "paper",
+        "run",
+        "demo",
+        "--strategy",
+        "fixed_weights",
+        "-i",
+        "AAPL,MSFT",
+        "--weights",
+        "AAPL=0.05,MSFT=0.04",
+        "--param",
+        "rebalance=never",
+        "--no-refresh",
+    ]
+    r = runner.invoke(app, [*run_args, "--date", "2024-06-21"])
+    assert r.exit_code == 0, r.output
+    assert "2 order(s) submitted" in r.output and "submitted" in r.output
+    out = tmp_path / "blotter.html"
+    r = runner.invoke(app, [*run_args, "--date", "2024-06-24", "--html", str(out)])
+    assert r.exit_code == 0, r.output
+    assert "2 fill(s)" in r.output and out.exists() and "PAPER TRADING" in out.read_text()
+    r = runner.invoke(app, ["paper", "status", "demo"])
+    assert r.exit_code == 0 and "PAPER" in r.output and "XNAS_AAPL" in r.output, r.output
+    r = runner.invoke(app, ["paper", "fills", "demo"])
+    assert r.exit_code == 0 and "XNAS_MSFT" in r.output
+    r = runner.invoke(
+        app,
+        [
+            "paper",
+            "submit",
+            "demo",
+            "-i",
+            "AAPL",
+            "--side",
+            "buy",
+            "--qty",
+            "10",
+            "--type",
+            "limit",
+            "--limit",
+            "1",
+            "--tif",
+            "gtc",
+            "--date",
+            "2024-06-25",
+            "--no-refresh",
+        ],
+    )
+    assert r.exit_code == 0 and "open" in r.output, r.output
+    r = runner.invoke(app, ["paper", "orders", "demo"])
+    assert r.exit_code == 0 and "manual" in r.output
+    order_id = [line for line in r.output.splitlines() if "demo-" in line][0].split()[1]
+    r = runner.invoke(app, ["paper", "cancel", "demo", order_id])
+    assert r.exit_code == 0 and "cancelled" in r.output, r.output
+    r = runner.invoke(
+        app,
+        [
+            "paper",
+            "submit",
+            "demo",
+            "-i",
+            "AAPL",
+            "--side",
+            "buy",
+            "--qty",
+            "100000",
+            "--date",
+            "2024-06-25",
+            "--no-refresh",
+        ],
+    )
+    assert r.exit_code == 1 and "BLOCK" in r.output
+    r = runner.invoke(app, ["paper", "reconcile", "demo"])
+    assert r.exit_code == 0 and "reconciled" in r.output, r.output
+    r = runner.invoke(app, ["paper", "blotter", "demo", "--html", str(tmp_path / "b2.html")])
+    assert r.exit_code == 0 and (tmp_path / "b2.html").exists()
+    r = runner.invoke(app, ["paper", "live"])
+    assert r.exit_code == 2 and "disabled" in r.output

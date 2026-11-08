@@ -131,10 +131,13 @@ def test_unsafe_instrument_id_rejected(tmp_path):
 
 
 def test_duckdb_migrate_is_idempotent(tmp_path):
+    from quant.data.store import SCHEMA_VERSION
+
     db = DuckDBStore(tmp_path / "q.duckdb")
-    assert db.migrate() == 1
-    assert db.migrate() == 1
+    assert db.migrate() == SCHEMA_VERSION
+    assert db.migrate() == SCHEMA_VERSION
     assert {"instruments", "lineage", "series_meta", "symbol_history", "schema_version"} <= set(db.tables())
+    assert {"paper_accounts", "paper_orders", "paper_fills", "paper_events"} <= set(db.tables())
     assert db.query("SELECT count(*) AS n FROM schema_version")["n"].iloc[0] == 1
 
 

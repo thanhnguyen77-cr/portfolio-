@@ -282,7 +282,7 @@ class ParquetStore:
 
 # ----------------------------------------------------------------------------- DuckDB store
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # 2: paper-trading ledger tables
 
 _DDL: tuple[str, ...] = (
     """
@@ -426,6 +426,118 @@ _DDL: tuple[str, ...] = (
         versions VARCHAR,
         diff VARCHAR,
         note VARCHAR
+    )
+    """,
+    # ---------------------------------------------------------------- paper trading ledger (schema v2)
+    """
+    CREATE TABLE IF NOT EXISTS paper_accounts (
+        account_id VARCHAR PRIMARY KEY,
+        broker VARCHAR NOT NULL,
+        base_currency VARCHAR NOT NULL,
+        initial_cash DOUBLE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        as_of DATE,
+        config VARCHAR
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_cash (
+        account_id VARCHAR NOT NULL,
+        currency VARCHAR NOT NULL,
+        amount DOUBLE NOT NULL,
+        PRIMARY KEY (account_id, currency)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_positions (
+        account_id VARCHAR NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        qty DOUBLE NOT NULL,
+        avg_price DOUBLE NOT NULL,
+        currency VARCHAR NOT NULL,
+        PRIMARY KEY (account_id, instrument_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_marks (
+        account_id VARCHAR NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        price DOUBLE NOT NULL,
+        session_date DATE,
+        PRIMARY KEY (account_id, instrument_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_orders (
+        account_id VARCHAR NOT NULL,
+        order_id VARCHAR NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        side VARCHAR NOT NULL,
+        qty DOUBLE NOT NULL,
+        order_type VARCHAR NOT NULL,
+        limit_price DOUBLE,
+        stop_price DOUBLE,
+        tif VARCHAR NOT NULL,
+        status VARCHAR NOT NULL,
+        filled_qty DOUBLE NOT NULL,
+        avg_fill_price DOUBLE,
+        created_session DATE,
+        eligible_from DATE,
+        tag VARCHAR,
+        client_order_id VARCHAR,
+        notes VARCHAR,
+        triggered BOOLEAN,
+        updated_at TIMESTAMPTZ,
+        PRIMARY KEY (account_id, order_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_fills (
+        account_id VARCHAR NOT NULL,
+        fill_id VARCHAR NOT NULL,
+        order_id VARCHAR NOT NULL,
+        instrument_id VARCHAR NOT NULL,
+        side VARCHAR NOT NULL,
+        qty DOUBLE NOT NULL,
+        price DOUBLE NOT NULL,
+        session_date DATE NOT NULL,
+        currency VARCHAR NOT NULL,
+        commission DOUBLE,
+        spread DOUBLE,
+        slippage DOUBLE,
+        taxes DOUBLE,
+        fx_cost DOUBLE,
+        tag VARCHAR,
+        PRIMARY KEY (account_id, fill_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_equity (
+        account_id VARCHAR NOT NULL,
+        session_date DATE NOT NULL,
+        equity DOUBLE NOT NULL,
+        cash_base DOUBLE NOT NULL,
+        positions_value DOUBLE NOT NULL,
+        gross_exposure DOUBLE,
+        net_exposure DOUBLE,
+        turnover DOUBLE,
+        n_positions INTEGER,
+        fills INTEGER,
+        PRIMARY KEY (account_id, session_date)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS paper_events (
+        account_id VARCHAR NOT NULL,
+        event_id INTEGER NOT NULL,
+        ts TIMESTAMPTZ NOT NULL,
+        session_date DATE,
+        type VARCHAR NOT NULL,
+        instrument_id VARCHAR,
+        detail VARCHAR,
+        amount DOUBLE,
+        currency VARCHAR,
+        PRIMARY KEY (account_id, event_id)
     )
     """,
 )

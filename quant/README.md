@@ -56,6 +56,11 @@ quant risk stress -i AAPL,MSFT,JPM --start 2007-01-01 --shock crash:AAPL=-0.3,MS
 quant risk drawdown AAPL --start 2015-01-01   # or --backtest runs/trend for a saved equity curve
 quant risk correlation -i AAPL,MSFT,JPM --window 63
 quant risk report -i AAPL,MSFT,JPM --html risk.html
+quant paper init demo --cash 1000000 --as-of 2024-06-18          # sim broker, multi-currency, DuckDB ledger
+quant paper run demo --strategy fixed_weights -i AAPL,MSFT --weights AAPL=0.05,MSFT=0.04 --html blotter.html
+quant paper submit demo -i AAPL --side buy --qty 10 --type limit --limit 150 --stop-loss 140 --take-profit 180
+quant paper status demo && quant paper reconcile demo
+quant paper live                                                 # prints why live trading is refused
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -104,7 +109,12 @@ caps; a vectorised periodic rebalance pinned to the engine by an equivalence tes
 Monte Carlo VaR/CVaR with a Kupiec backtest of out-of-sample rolling VaR; dated stress windows from the GFC to
 the 2022 gilt crisis with coverage reported, hypothetical and beta shocks, factor scenarios from estimated
 betas; calm-versus-stress correlation breakdown, diversification and absorption ratios; drawdown episodes,
-ulcer/pain indices, CDaR; an HTML risk report; `quant risk`). Next: S12 paper trading.
+ulcer/pain indices, CDaR; an HTML risk report; `quant risk`), **S12 paper trading** (Broker protocol; a
+multi-currency SimBroker that re-uses the engine's fill rules and cost model and is pinned to the engine by a
+fill-for-fill equivalence test; a DuckDB ledger whose cash and positions are re-derivable from the event log;
+a pre-trade gate ported from the plugin's rule list; a daily runner that replays missed sessions, lets the
+strategy decide on data up to the close, gates and submits orders and reconciles; an HTML blotter; an Alpaca
+adapter that refuses `paper=False`; `quant paper`). Next: S13 remaining data adapters.
 
 ## Module map
 
