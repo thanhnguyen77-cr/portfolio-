@@ -103,8 +103,13 @@ November 2024, so the adapter was re-pointed at the ONS website's JSON endpoint 
 now resolve; Wikipedia still serves the S&P 500, FTSE 100 and FTSE 250 constituent tables but has removed
 the S&P 500 "selected changes" section and the Nasdaq-100 components list, so S&P history reconstruction and
 the Nasdaq-100 universe now need a CSV import; Stooq answered an identified non-browser client with an HTML
-page rather than CSV, so that adapter is not usable as-is. SEC EDGAR was not exercised live because it
-requires a personal contact address in the User-Agent.
+page rather than CSV, so that adapter is not usable as-is; the Ken French factor file loaded live (daily
+five-factor data to 2026-09-30); Nasdaq Data Link now answers anonymous requests with HTTP 403, so that
+adapter needs a key. SEC EDGAR and the SEC fee-rate advisories were not exercised live because sec.gov
+requires a personal contact address in the User-Agent. Fee rates: the PTM levy amount (150p above
+GBP 10,000) and the FINRA Trading Activity Fee rate and cap (USD 0.000166 per share, USD 8.30 per trade)
+were confirmed on their primary pages, which do not state effective dates, so those two rules remain
+flagged unverified for their dates; the SEC Section 31 rate could not be checked.
 
 ## Status
 
@@ -184,12 +189,14 @@ shown to make money, because that was never the claim.
   fails with that message; the Bank of England export throttles bursts of requests with an HTML error page
   (the adapter retries three times, then reports it); the Companies House adapter indexes filings but does
   not parse iXBRL accounts;
-  Nasdaq Data Link anonymous quotas are small; Alpaca, Polygon, Tiingo, NDL and Companies House have been
-  exercised only against recorded fixtures (they need API keys).
+  Nasdaq Data Link rejects anonymous requests (HTTP 403), so it needs a key; Alpaca, Polygon, Tiingo, NDL
+  and Companies House have been exercised only against recorded fixtures (they need API keys).
 - FX conversion uses the vendor's ~17:00 New York daily fix for London 16:30 closes (documented in
   `quant/data/fx.py`); it is forward-filled, never backfilled.
-- Fee and levy rates live in `quant/config/fees.yaml` with `verified` flags; the PTM levy increase and the
-  SEC Section 31 rate are seeded from memory and need checking against the primary sources before use.
+- Fee and levy rates live in `quant/config/fees.yaml` with `verified` flags. The current PTM levy amount and
+  FINRA TAF rate/cap were confirmed on 2026-11-08 but their effective dates were not; the SEC Section 31
+  rate was not checked (sec.gov needs a contact User-Agent). Those three rules stay unverified and are
+  listed in backtest caveats until confirmed.
 - Licensed vendors (Bloomberg, Refinitiv, FactSet, Capital IQ) are stubs that document the wiring and raise.
 
 **Models**
