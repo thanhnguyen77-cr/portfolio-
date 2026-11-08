@@ -47,6 +47,10 @@ quant macro series us_cpi --start 2015-01-01
 quant macro curve --region us            # tenor snapshot, 10y-2y slope, inversion flags
 quant macro inflation --region uk        # YoY / 3m annualised / regime labels
 quant macro dashboard --region us --html board.html   # cross-asset regime board from cached inputs
+quant optimize weights -i AAPL,MSFT,JPM --method hrp --start 2020-01-01 --html weights.html
+quant optimize weights -i AAPL,MSFT,JPM --method bl --view AAPL:0.10@0.5 --market-weights AAPL=0.5,MSFT=0.3,JPM=0.2
+quant optimize frontier -i AAPL,MSFT,JPM --points 10      # long-only frontier from shrunk historical means
+quant optimize size --win-rate 0.55 --payoff 1.8 --trades 60 --entry 100 --stop 95 --capital 100000
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -85,7 +89,13 @@ attribution; Ken French loader; `quant factors`), **S9 macro** (ONS time-series 
 US and UK series with per-series `verified` flags, several UK BoE/ONS ids still unverified against the live
 APIs; yield-curve slope, curvature, inversion flags and tenor snapshots; inflation transforms and a
 rule-based regime label; a growth x inflation quadrant and cross-asset board that lists missing inputs
-rather than imputing them; `quant macro`). Next: S10 portfolio construction.
+rather than imputing them; `quant macro`), **S10 portfolio** (sample / EWMA / Ledoit-Wolf covariance with
+PSD repair; SLSQP mean-variance with box, budget, gross and group constraints and reported binding
+constraints; min-variance, max-Sharpe, target-return, target-risk and the efficient frontier; risk parity in
+Spinu's convex form plus a bounded fallback; Black-Litterman with absolute and relative views; HRP; ex-ante
+and realised vol targeting with lagged leverage; fractional-Kelly sizing with Wilson shrinkage and ordered
+caps; a vectorised periodic rebalance pinned to the engine by an equivalence test; `FixedWeights` strategy;
+`quant optimize`). Next: S11 risk analytics.
 
 ## Module map
 

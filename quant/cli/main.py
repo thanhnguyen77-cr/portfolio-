@@ -14,6 +14,7 @@ from quant.cli.data_cmd import data_app
 from quant.cli.factors_cmd import factors_app
 from quant.cli.fundamentals_cmd import fundamentals_app
 from quant.cli.macro_cmd import macro_app
+from quant.cli.optimize_cmd import optimize_app
 from quant.cli.universe_cmd import screen, universe_app
 
 app = typer.Typer(
@@ -47,6 +48,7 @@ app.add_typer(analyze_app, name="analyze")
 app.add_typer(fundamentals_app, name="fundamentals")
 app.add_typer(factors_app, name="factors")
 app.add_typer(macro_app, name="macro")
+app.add_typer(optimize_app, name="optimize")
 app.add_typer(universe_app, name="universe")
 app.command("screen")(screen)
 

@@ -411,3 +411,56 @@ def test_macro_commands_on_cached_data(monkeypatch, tmp_path):
     assert "quadrant" in d.output and out.exists() and "Caveats" in out.read_text()
     empty = runner.invoke(app, ["macro", "dashboard", "--region", "uk", "--end", "2024-06-28"])
     assert empty.exit_code == 1 and "no inputs" in empty.output
+
+
+def test_optimize_commands_on_cached_data(monkeypatch, tmp_path):
+    from datetime import date
+
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.data.store import ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    cat = load_default_catalog()
+    store = ParquetStore(tmp_path / "data" / "parquet")
+    for iid, seed in (("XNAS_AAPL", 1), ("XNAS_MSFT", 2), ("XNYS_JPM", 3)):
+        store.write_bars(
+            make_bars(cat[iid], date(2021, 1, 4), date(2024, 6, 28), seed=seed, vendor="yfinance")
+        )
+    common = [
+        "--instruments",
+        "AAPL,MSFT,JPM",
+        "--start",
+        "2022-01-03",
+        "--end",
+        "2024-06-28",
+        "--no-refresh",
+    ]
+    out = tmp_path / "weights.html"
+    r = runner.invoke(app, ["optimize", "weights", *common, "--method", "hrp", "--html", str(out)])
+    assert r.exit_code == 0, r.output
+    assert "hrp" in r.output and "risk_contribution" in r.output and out.exists()
+    assert "Caveats" in out.read_text() and "not the future" in out.read_text()
+    views = ["--view", "AAPL:0.10@0.5", "--view", "AAPL-MSFT:0.02"]
+    mkt = ["--market-weights", "AAPL=0.5,MSFT=0.3,JPM=0.2"]
+    r = runner.invoke(app, ["optimize", "weights", *common, "--method", "bl", *views, *mkt])
+    assert r.exit_code == 0, r.output
+    assert "black_litterman" in r.output and "posterior" in r.output
+    r = runner.invoke(app, ["optimize", "weights", *common, "--method", "maxsharpe", "--target-vol", "0.10"])
+    assert r.exit_code == 0, r.output
+    assert "scaled_weight" in r.output and "leverage" in r.output
+    r = runner.invoke(app, ["optimize", "weights", *common, "--method", "rp", "--max-weight", "0.4"])
+    assert r.exit_code == 0 and "risk_parity" in r.output, r.output
+    r = runner.invoke(app, ["optimize", "frontier", *common, "--points", "5"])
+    assert r.exit_code == 0 and "target_return" in r.output, r.output
+    r = runner.invoke(
+        app,
+        ["optimize", "size", "--win-rate", "0.55", "--payoff", "1.8", "--trades", "60", "--entry", "100",
+         "--stop", "95", "--capital", "100000"],
+    )  # fmt: skip
+    assert r.exit_code == 0 and "SIZE" in r.output and "binding" in r.output, r.output
+    bad = runner.invoke(app, ["optimize", "weights", "--instruments", "AAPL", "--no-refresh"])
+    assert bad.exit_code != 0

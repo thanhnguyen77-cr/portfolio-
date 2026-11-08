@@ -558,6 +558,55 @@ class DataService:
             series = series[series["session_date"] <= pd.Timestamp(to_date(as_of))]
         return None if series.empty else float(series["close"].iloc[-1])
 
+    def close_panel(
+        self,
+        instruments: Sequence[Instrument | str],
+        start: date | str,
+        end: date | str | None = None,
+        *,
+        adjusted: bool = True,
+        as_of: date | str | None = None,
+        to_currency: str | None = None,
+        refresh: bool | None = None,
+    ) -> pd.DataFrame:
+        """Wide session_date x instrument_id frame of (adjusted) closes, optionally converted to one currency.
+
+        Conversion uses cached FX bars at the vendor's daily fix (see quant.data.fx FIXING NOTE) and forward-
+        fills only; dates before the first available fix stay NaN.
+        """
+        insts = [self.resolve(i) for i in instruments]
+        start_d = to_date(start)
+        end_d = to_date(end) if end is not None else today()
+        if adjusted:
+            bars = self.get_adjusted_bars(insts, start_d, end_d, as_of=as_of, refresh=refresh)
+            col = "adj_close"
+        else:
+            bars = self.get_bars(insts, start_d, end_d, refresh=refresh)
+            col = "close"
+        if bars.empty:
+            return pd.DataFrame()
+        panel = bars.pivot(index="session_date", columns="instrument_id", values=col).sort_index()
+        if to_currency:
+            from quant.data.fx import FXRates
+
+            by_id = {i.instrument_id: i for i in insts}
+            foreign = sorted({i.currency.value for i in insts} - {to_currency})
+            if foreign:
+                needed = {frozenset({to_currency, f}) for f in foreign}
+                pairs = [
+                    p
+                    for p in self.catalog.filter(asset_class="fx")
+                    if frozenset({p.symbol[:3], p.symbol[3:]}) in needed
+                ]
+                fx_bars = self.get_bars(pairs, start_d, end_d, refresh=refresh) if pairs else bars.iloc[0:0]
+                fx = FXRates.from_bars(fx_bars, self.catalog)
+                for iid in panel.columns:
+                    ccy = by_id[str(iid)].currency.value
+                    if ccy != to_currency:
+                        rate = fx.rate(ccy, to_currency, panel.index)
+                        panel[iid] = panel[iid].to_numpy() * rate.to_numpy()
+        return panel
+
     # ------------------------------------------------------------------ factors
     def build_factor_returns(
         self,
