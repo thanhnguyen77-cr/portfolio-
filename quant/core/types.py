@@ -27,15 +27,19 @@ class Market(StrEnum):
     XNAS = "XNAS"  # Nasdaq
     XLON = "XLON"  # London Stock Exchange
     CMES = "CMES"  # CME equity-index futures
-    XCBT = "XCBT"  # CBOT grains / treasuries
-    XCEC = "XCEC"  # COMEX metals
-    XNYM = "XNYM"  # NYMEX energy (also used as a proxy for ICE Brent)
+    XCBT = "XCBT"  # CBOT grains / treasuries (Globex calendar: CMES)
+    XCEC = "XCEC"  # COMEX metals (Globex calendar: CMES)
+    XNYM = "XNYM"  # NYMEX energy, also a proxy for ICE Brent (Globex calendar: CMES)
     FX = "FX"  # spot FX: weekday proxy calendar, 17:00 New York close
     CRYPTO = "CRYPTO"  # 24/7
 
     @property
     def calendar_code(self) -> str:
-        return self.value
+        return _CALENDAR_FOR_MARKET.get(self, self.value)
+
+
+# Venues without their own exchange_calendars entry borrow the calendar of the group they trade on.
+_CALENDAR_FOR_MARKET: dict[Market, str] = {Market.XCBT: "CMES", Market.XCEC: "CMES", Market.XNYM: "CMES"}
 
 
 class Currency(StrEnum):
@@ -128,14 +132,15 @@ class Instrument(BaseModel):
     lot_size: int = 1
     identifiers: dict[str, str] = Field(
         default_factory=dict,
-        description="vendor -> vendor symbol (yahoo, stooq, fred, boe, bbg, ric, isin, sedol, figi, alpaca, ...)",
+        description="vendor -> vendor symbol (yahoo, stooq, fred, boe, bbg, ric, isin, sedol, figi, alpaca)",
     )
     notes: str | None = None
 
     @model_validator(mode="before")
     @classmethod
     def _derive_id(cls, data: Any) -> Any:
-        if isinstance(data, dict) and not data.get("instrument_id") and data.get("market") and data.get("symbol"):
+        needs_id = isinstance(data, dict) and not data.get("instrument_id")
+        if needs_id and data.get("market") and data.get("symbol"):
             data = dict(data)
             data["instrument_id"] = make_instrument_id(data["market"], data["symbol"])
         return data

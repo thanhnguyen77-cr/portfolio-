@@ -70,6 +70,10 @@ addopts = "-m 'not live' -p no:cacheprovider"
 markers = [
   "live: hits real network endpoints; deselected by default and never run in CI",
 ]
+filterwarnings = [
+  # raised inside exchange_calendars on pandas >= 3.1; not ours to fix
+  "ignore:Series.values returning an ndarray that drops timezone information",
+]
 
 [tool.ruff]
 line-length = 110

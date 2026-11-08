@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pandas as pd
 import pytest
@@ -16,7 +16,7 @@ def test_now_is_tz_aware_utc():
 
 def test_frozen_now_and_restore():
     with frozen_now("2024-01-02T10:00:00Z") as fixed:
-        assert fixed == datetime(2024, 1, 2, 10, tzinfo=timezone.utc)
+        assert fixed == datetime(2024, 1, 2, 10, tzinfo=UTC)
         assert now() == fixed
         assert today() == date(2024, 1, 2)
     assert now() != fixed
@@ -30,7 +30,7 @@ def test_frozen_now_nests():
 
 
 def test_ensure_utc_treats_naive_as_utc_and_converts_aware():
-    assert ensure_utc(datetime(2024, 1, 1, 12)) == datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
+    assert ensure_utc(datetime(2024, 1, 1, 12)) == datetime(2024, 1, 1, 12, tzinfo=UTC)
     ny = pd.Timestamp("2024-01-01 12:00", tz="America/New_York")
     assert ensure_utc(ny) == pd.Timestamp("2024-01-01 17:00", tz="UTC")
     assert ensure_utc(pd.Timestamp("2024-01-01 12:00")) == pd.Timestamp("2024-01-01 12:00", tz="UTC")

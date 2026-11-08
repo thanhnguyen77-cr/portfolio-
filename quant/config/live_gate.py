@@ -18,7 +18,9 @@ LIVE_ENV_VAR = "QUANT_I_UNDERSTAND_LIVE_TRADING"
 CONFIRMATION_PHRASE = "I understand live trading risks real money"
 
 
-def require_live_confirmation(settings: QuantSettings, confirm: Callable[[str], str] | None = None) -> NoReturn:
+def require_live_confirmation(
+    settings: QuantSettings, confirm: Callable[[str], str] | None = None
+) -> NoReturn:
     """Raise `LiveTradingDisabled` unless every gate passes; then raise `NotImplementedError` (v1)."""
     if not settings.trading.live_enabled:
         raise LiveTradingDisabled(
@@ -32,5 +34,6 @@ def require_live_confirmation(settings: QuantSettings, confirm: Callable[[str], 
     if typed.strip() != CONFIRMATION_PHRASE:
         raise LiveTradingDisabled("confirmation phrase did not match; live trading aborted")
     raise NotImplementedError(
-        "All live-trading gates passed, but this version has no live broker implementation. Paper trading only."
+        "All live-trading gates passed, but this version has no live broker implementation. "
+        "Paper trading only."
     )

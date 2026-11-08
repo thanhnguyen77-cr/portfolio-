@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pandas as pd
 
-UTC = timezone.utc
+UTC = UTC
 
 _now_override: Callable[[], datetime] | None = None
 

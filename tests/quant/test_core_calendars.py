@@ -13,6 +13,7 @@ from quant.core.calendars import (
     union_sessions,
 )
 from quant.core.errors import CalendarError
+from quant.core.types import Market
 
 
 def _utc(s: str) -> pd.Timestamp:
@@ -116,7 +117,14 @@ def test_crypto_calendar_every_day():
     assert cal.next_session(date(2024, 7, 6)) == date(2024, 7, 7)
 
 
-@pytest.mark.parametrize("code", ["XNAS", "CMES", "XCBT", "XCEC", "XNYM"])
-def test_futures_and_nasdaq_calendars_build(code):
+@pytest.mark.parametrize("code", ["XNAS", "CMES"])
+def test_nasdaq_and_cme_calendars_build(code):
     cal = get_calendar(code)
     assert cal.is_session(date(2024, 7, 5))
+
+
+def test_cme_group_venues_share_the_globex_calendar():
+    for market in (Market.XCBT, Market.XCEC, Market.XNYM):
+        assert market.calendar_code == "CMES"
+        assert get_calendar(market.calendar_code).is_session(date(2024, 7, 5))
+    assert Market.XLON.calendar_code == "XLON"

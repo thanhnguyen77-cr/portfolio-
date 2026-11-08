@@ -26,4 +26,5 @@ def test_config_shows_effective_settings_with_secrets_masked(monkeypatch, tmp_pa
 
 def test_no_args_shows_help():
     result = runner.invoke(app, [])
-    assert "Research use only" in result.output
+    assert result.exit_code in (0, 2)
+    assert "Research use only" in " ".join(result.output.split())  # help text is line-wrapped

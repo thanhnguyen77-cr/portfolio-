@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -22,7 +23,9 @@ def version() -> None:
 
 @app.command()
 def config(
-    config_file: Path | None = typer.Option(None, "--config", "-c", help="User YAML layered over the defaults."),
+    config_file: Annotated[
+        Path | None, typer.Option("--config", "-c", help="User YAML layered over the defaults.")
+    ] = None,
 ) -> None:
     """Show the effective configuration (secrets masked)."""
     from quant.config.settings import load_settings

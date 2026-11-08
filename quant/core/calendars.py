@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
-from functools import lru_cache, reduce
+from functools import cache, reduce
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -17,7 +17,8 @@ from quant.core.errors import CalendarError
 from quant.core.time import to_date
 
 CALENDAR_START = "1990-01-01"
-EXCHANGE_CODES: frozenset[str] = frozenset({"XNYS", "XNAS", "XLON", "CMES", "XCBT", "XCEC", "XNYM"})
+# Codes exchange_calendars ships. CME Group venues (CBOT, COMEX, NYMEX) trade on Globex and map to CMES.
+EXCHANGE_CODES: frozenset[str] = frozenset({"XNYS", "XNAS", "XLON", "CMES"})
 SYNTHETIC_CODES: frozenset[str] = frozenset({"FX", "CRYPTO"})
 
 DateLike = str | date | datetime | pd.Timestamp
@@ -154,10 +155,8 @@ class AllDaysCryptoCalendar(TradingCalendar):
         return pd.Timestamp(to_date(d), tz="UTC") + pd.Timedelta(hours=23, minutes=59, seconds=59)
 
 
-@lru_cache(maxsize=None)
-def get_calendar(code: str) -> TradingCalendar:
-    """Return the calendar for an exchange code (XNYS, XLON, ...) or a synthetic code (FX, CRYPTO)."""
-    code = str(code).upper()
+@cache
+def _build_calendar(code: str) -> TradingCalendar:
     if code == "FX":
         return WeekdayFXCalendar()
     if code == "CRYPTO":
@@ -165,6 +164,11 @@ def get_calendar(code: str) -> TradingCalendar:
     if code in EXCHANGE_CODES:
         return ExchangeCalendarAdapter(code)
     raise CalendarError(f"unknown calendar code {code!r}; known: {sorted(EXCHANGE_CODES | SYNTHETIC_CODES)}")
+
+
+def get_calendar(code: str) -> TradingCalendar:
+    """Return the (cached) calendar for an exchange code (XNYS, XLON, CMES, ...) or FX / CRYPTO."""
+    return _build_calendar(str(code).strip().upper())
 
 
 def union_sessions(codes: Iterable[str], start: DateLike, end: DateLike) -> pd.DatetimeIndex:

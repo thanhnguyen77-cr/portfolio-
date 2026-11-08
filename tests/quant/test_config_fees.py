@@ -52,7 +52,9 @@ def test_unverified_rules_are_reported(schedule):
 
 def test_invalid_schedule_rejected(tmp_path):
     bad = tmp_path / "fees.yaml"
-    bad.write_text("uk:\n  sdrt:\n    - {effective_from: 2000-01-01, rate: -0.1, applies_to: [uk_ordinary]}\n")
+    bad.write_text(
+        "uk:\n  sdrt:\n    - {effective_from: 2000-01-01, rate: -0.1, applies_to: [uk_ordinary]}\n"
+    )
     with pytest.raises(ConfigError, match="invalid fee schedule"):
         load_fee_schedule(bad)
     with pytest.raises(ConfigError, match="not found"):

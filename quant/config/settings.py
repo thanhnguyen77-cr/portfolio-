@@ -141,7 +141,13 @@ class QuantSettings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         # Highest priority first: explicit kwargs > environment > .env > YAML (user over defaults).
-        return (init_settings, env_settings, dotenv_settings, YamlSettingsSource(settings_cls), file_secret_settings)
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            YamlSettingsSource(settings_cls),
+            file_secret_settings,
+        )
 
 
 def load_settings(config_file: str | Path | None = None, **overrides: Any) -> QuantSettings:
