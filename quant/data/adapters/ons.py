@@ -1,0 +1,99 @@
+"""Office for National Statistics time series (UK) via the public `timeseries` JSON endpoint.
+
+Series are addressed as `DATASET/SERIES` (e.g. `MM23/L55O` for CPIH annual rate, `LMS/MGSX` for the
+unemployment rate). Monthly observations are preferred, then quarterly, then annual; dates are the start of
+the period. ONS revises history, so re-fetching can restate values (the store keeps the latest).
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Mapping, Sequence
+from datetime import date
+from typing import Any
+
+import pandas as pd
+
+from quant.core.time import to_date
+from quant.data.adapters.base import AdapterResult, BaseHTTPAdapter, Capability, RateLimit
+from quant.data.adapters.fred import _empty_macro, macro_frame
+
+ONS_URL = "https://api.ons.gov.uk/timeseries/{series}/dataset/{dataset}/data"
+_MONTHS = {
+    m: i
+    for i, m in enumerate(
+        ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], 1
+    )
+}
+
+
+def parse_ons_date(label: str) -> pd.Timestamp | None:
+    s = str(label).strip().upper()
+    m = re.fullmatch(r"(\d{4}) ([A-Z]{3})", s)
+    if m and m.group(2) in _MONTHS:
+        return pd.Timestamp(int(m.group(1)), _MONTHS[m.group(2)], 1)
+    q = re.fullmatch(r"(\d{4}) Q([1-4])", s)
+    if q:
+        return pd.Timestamp(int(q.group(1)), 3 * (int(q.group(2)) - 1) + 1, 1)
+    if re.fullmatch(r"\d{4}", s):
+        return pd.Timestamp(int(s), 1, 1)
+    return None
+
+
+class ONSAdapter(BaseHTTPAdapter):
+    name = "ons"
+    identifier_key = "ons"
+    rate_limit = RateLimit(min_interval_s=0.5)
+
+    def capabilities(self) -> frozenset[Capability]:
+        return frozenset({Capability.MACRO})
+
+    @staticmethod
+    def split_id(series_id: str) -> tuple[str, str]:
+        if "/" not in series_id:
+            raise ValueError(f"ONS series must be DATASET/SERIES, got {series_id!r}")
+        dataset, series = series_id.split("/", 1)
+        return dataset.upper(), series.upper()
+
+    @staticmethod
+    def parse_payload(series_id: str, payload: Mapping[str, Any], vendor: str = "ons") -> pd.DataFrame:
+        for key in ("months", "quarters", "years"):
+            obs = payload.get(key) or []
+            if obs:
+                dates = [parse_ons_date(o.get("date", "")) for o in obs]
+                values = [o.get("value") for o in obs]
+                keep = [i for i, d in enumerate(dates) if d is not None]
+                if not keep:
+                    continue
+                return macro_frame(
+                    series_id,
+                    pd.Series([dates[i] for i in keep]),
+                    pd.Series([values[i] for i in keep]),
+                    vendor,
+                )
+        return _empty_macro()
+
+    def get_macro_series(self, series_ids: Sequence[str], start: date, end: date) -> AdapterResult:
+        start_d, end_d = to_date(start), to_date(end)
+        frames, errors = [], {}
+        for sid in series_ids:
+            try:
+                dataset, series = self.split_id(sid)
+                payload = self._http("GET", ONS_URL.format(series=series, dataset=dataset)).json()
+                df = self.parse_payload(sid.upper(), payload, self.name)
+                df = df[(df["date"] >= pd.Timestamp(start_d)) & (df["date"] <= pd.Timestamp(end_d))]
+            except Exception as exc:  # noqa: BLE001
+                errors[sid] = f"{type(exc).__name__}: {str(exc)[:200]}"
+                continue
+            if df.empty:
+                errors[sid] = f"no observations for {sid} in {start_d}..{end_d}"
+                continue
+            frames.append(df.reset_index(drop=True))
+        frame = pd.concat(frames, ignore_index=True) if frames else _empty_macro()
+        return AdapterResult(
+            vendor=self.name,
+            frame=frame,
+            errors=errors,
+            requested=list(series_ids),
+            params={"start": start_d.isoformat(), "end": end_d.isoformat()},
+        )

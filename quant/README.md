@@ -42,6 +42,11 @@ quant fundamentals scores sp500          # percentile ranks across a stored univ
 quant factors build ftse_factors --universe ftse100 --start 2018-01-01 --sector-neutral
 quant factors exposures runs/trend --factors ftse_factors --rf 0.04   # a backtest --out dir, or an instrument
 quant factors kenfrench --file ff5_daily # US Fama-French factors (network)
+quant macro catalog --region uk          # catalogued FRED / BoE / ONS series (unverified ids are flagged)
+quant macro series us_cpi --start 2015-01-01
+quant macro curve --region us            # tenor snapshot, 10y-2y slope, inversion flags
+quant macro inflation --region uk        # YoY / 3m annualised / regime labels
+quant macro dashboard --region us --html board.html   # cross-asset regime board from cached inputs
 ```
 
 Configuration is layered: package defaults (`quant/config/default.yaml`) → your YAML (`quant --config my.yaml`)
@@ -76,7 +81,11 @@ a sensitivity grid, comparables, cross-sectional quality/value/growth scores, ea
 `quant fundamentals`), **S8 factors** (12-1 momentum, low-vol, size, point-in-time value and quality
 characteristics; rank-normalisation with optional sector neutrality; dollar-neutral quantile long-short factor
 returns with drift between monthly rebalances; HAC exposures with injectable risk-free rate; exact arithmetic
-attribution; Ken French loader; `quant factors`). Next: S9 macro.
+attribution; Ken French loader; `quant factors`), **S9 macro** (ONS time-series adapter; a catalogue of
+US and UK series with per-series `verified` flags, several UK BoE/ONS ids still unverified against the live
+APIs; yield-curve slope, curvature, inversion flags and tenor snapshots; inflation transforms and a
+rule-based regime label; a growth x inflation quadrant and cross-asset board that lists missing inputs
+rather than imputing them; `quant macro`). Next: S10 portfolio construction.
 
 ## Module map
 

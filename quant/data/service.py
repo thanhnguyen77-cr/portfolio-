@@ -83,15 +83,16 @@ class DataService:
     def _default_adapters(self) -> dict[str, MarketDataAdapter]:
         from quant.data.adapters.boe import BankOfEnglandAdapter
         from quant.data.adapters.fred import FREDAdapter
+        from quant.data.adapters.ons import ONSAdapter
+        from quant.data.adapters.sec_edgar import SECEdgarAdapter
         from quant.data.adapters.yfinance_adapter import YFinanceAdapter
 
         fred_key = self.settings.fred_api_key.get_secret_value() if self.settings.fred_api_key else None
-        from quant.data.adapters.sec_edgar import SECEdgarAdapter
-
         return {
             "yfinance": YFinanceAdapter(drop_unfinished_session=self.settings.data.drop_unfinished_session),
             "fred": FREDAdapter(api_key=fred_key),
             "boe": BankOfEnglandAdapter(),
+            "ons": ONSAdapter(),
             "sec_edgar": SECEdgarAdapter(user_agent=self.settings.sec_user_agent),
         }
 
@@ -285,6 +286,8 @@ class DataService:
     def macro_vendor_for(self, series_id: str, vendor: str | None = None) -> str:
         if vendor:
             return vendor
+        if "/" in series_id and "ons" in self.adapters:  # ONS ids are "<dataset>/<series>"
+            return "ons"
         for name in ("fred", "boe"):
             inst = self.catalog.by_vendor_symbol(name, series_id)
             if inst is not None and name in self.adapters:
@@ -355,6 +358,114 @@ class DataService:
                     self.fetch_macro([series_id], last + timedelta(days=1), end_d, vendor_name)
         df = self.db.load_macro(series_id, vendor_name, start_d, end_d)
         return pd.Series(df["value"].to_numpy(), index=pd.DatetimeIndex(df["date"]), name=series_id)
+
+    def macro_series(
+        self,
+        name: str,
+        start: date | str,
+        end: date | str | None = None,
+        refresh: bool | None = None,
+    ) -> pd.Series:
+        """A catalogued macro series (see quant.macro.catalog) by friendly name, e.g. 'us_cpi' or 'uk_10y'."""
+        from quant.macro.catalog import macro_series_spec
+
+        try:
+            spec = macro_series_spec(name)
+        except KeyError as exc:
+            raise ConfigError(str(exc)) from None
+        return self.get_macro(spec.series_id, start, end, vendor=spec.vendor, refresh=refresh).rename(name)
+
+    def macro_dashboard(
+        self,
+        region: str = "us",
+        start: date | str | None = None,
+        end: date | str | None = None,
+        *,
+        refresh: bool | None = False,
+    ) -> dict[str, Any]:
+        """Cross-asset regime board for 'us' or 'uk' from whatever inputs are available (missing ones listed).
+
+        Inputs that cannot be served (not cached and refresh=False, vendor error, empty response) are reported
+        in `notes` and the indicator is listed under `missing`; nothing is imputed.
+        """
+        from quant.macro import annualised_3m, cross_asset_dashboard, slope, yoy
+
+        end_d = to_date(end) if end is not None else today()
+        start_d = to_date(start) if start is not None else end_d - timedelta(days=365 * 6)
+        series: dict[str, pd.Series] = {}
+        notes: list[str] = []
+
+        def grab(name: str) -> pd.Series | None:
+            try:
+                s = self.macro_series(name, start_d, end_d, refresh=refresh)
+            except Exception as exc:  # noqa: BLE001 - one failed input must not sink the board
+                notes.append(f"{name}: {type(exc).__name__}: {str(exc)[:120]}")
+                return None
+            if s.dropna().empty:
+                notes.append(f"{name}: no observations available ({start_d}..{end_d}, refresh={refresh})")
+                return None
+            return s
+
+        def closes(ref: str) -> pd.Series | None:
+            try:
+                bars = self.get_bars([ref], start_d, end_d, refresh=refresh)
+            except Exception as exc:  # noqa: BLE001
+                notes.append(f"{ref}: {type(exc).__name__}: {str(exc)[:120]}")
+                return None
+            if bars.empty:
+                notes.append(f"{ref}: no cached bars ({start_d}..{end_d}, refresh={refresh})")
+                return None
+            return bars.set_index("session_date")["close"].astype(float)
+
+        def put(key: str, s: pd.Series | None) -> None:
+            if s is not None and not s.dropna().empty:
+                series[key] = s
+
+        if region == "us":
+            ip = grab("us_industrial_production")
+            put("growth_ip_yoy", yoy(ip) if ip is not None else None)
+            put("growth_unemployment", grab("us_unemployment"))
+            payrolls = grab("us_payrolls")
+            put("growth_payrolls_3m", payrolls.diff(3) if payrolls is not None else None)
+            cpi = grab("us_cpi")
+            put("inflation_yoy", yoy(cpi) if cpi is not None else None)
+            put("inflation_3m_ann", annualised_3m(cpi) if cpi is not None else None)
+            put("rates_policy", grab("us_fed_funds"))
+            y10, y2 = grab("us_10y"), grab("us_2y")
+            put("rates_10y", y10)
+            put("rates_slope_10y_2y", slope(y10, y2) if y10 is not None and y2 is not None else None)
+            put("rates_real_10y", grab("us_real_10y"))
+            put("credit_hy_oas", grab("us_hy_oas"))
+            put("credit_ig_oas", grab("us_ig_oas"))
+            put("fx_dollar", grab("us_dollar_index"))
+            spx = closes("XNYS_SPX")
+            put("equity_vs_200d", spx / spx.rolling(200).mean() - 1 if spx is not None else None)
+            put("vol_index", closes("XNYS_VIX"))
+        elif region == "uk":
+            gdp = grab("uk_gdp_monthly")
+            put("growth_ip_yoy", yoy(gdp) if gdp is not None else None)
+            put("growth_unemployment", grab("uk_unemployment"))
+            put("inflation_yoy", grab("uk_cpih"))
+            bank_rate = grab("uk_bank_rate")
+            put("rates_policy", bank_rate)
+            y10 = grab("uk_10y")
+            put("rates_10y", y10)
+            if y10 is not None and bank_rate is not None:
+                put("rates_slope_10y_2y", slope(y10, bank_rate))
+                notes.append(
+                    "rates_slope_10y_2y for the UK is 10y gilt minus Bank Rate (no cached 2y gilt series)"
+                )
+            put("fx_gbpusd", closes("FX_GBPUSD"))
+            ukx = closes("XLON_UKX")
+            put("equity_vs_200d", ukx / ukx.rolling(200).mean() - 1 if ukx is not None else None)
+        else:
+            raise ConfigError("region must be 'us' or 'uk'")
+
+        board = cross_asset_dashboard(series, as_of=pd.Timestamp(end_d))
+        board["notes"] = notes
+        board["region"] = region
+        board["as_of"] = end_d
+        return board
 
     # ------------------------------------------------------------------ fundamentals & earnings
     def fetch_fundamentals(

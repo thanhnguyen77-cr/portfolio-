@@ -61,7 +61,7 @@ class TradingSettings(BaseModel):
 
 class DataSettings(BaseModel):
     adapter_priority: list[str] = Field(
-        default_factory=lambda: ["yfinance", "stooq", "fred", "boe", "sec_edgar"]
+        default_factory=lambda: ["yfinance", "stooq", "fred", "boe", "ons", "sec_edgar"]
     )
     cache_ttl_hours: float = Field(default=12.0, ge=0)
     drop_unfinished_session: bool = True

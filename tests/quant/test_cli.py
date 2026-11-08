@@ -352,3 +352,62 @@ def test_factors_build_and_exposures_cli(monkeypatch, tmp_path):
     assert missing.exit_code != 0
     kf = runner.invoke(app, ["factors", "kenfrench"])
     assert kf.exit_code == 1 and "download failed" in kf.output
+
+
+def test_macro_commands_on_cached_data(monkeypatch, tmp_path):
+    from datetime import date
+
+    import numpy as np
+    import pandas as pd
+    from conftest import make_bars
+
+    from quant.core.catalog import load_default_catalog
+    from quant.core.time import now
+    from quant.data.store import DuckDBStore, ParquetStore
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("QUANT_PATHS__DATA_DIR", str(tmp_path / "data"))
+    db = DuckDBStore(tmp_path / "data" / "quant.duckdb")
+    db.migrate()
+    idx_m = pd.date_range("2018-01-01", "2024-06-01", freq="MS")
+    idx_d = pd.bdate_range("2018-01-01", "2024-06-28")
+    rows = []
+    for sid, series in {
+        "CPIAUCSL": pd.Series(250 * 1.0025 ** np.arange(len(idx_m)), index=idx_m),
+        "UNRATE": pd.Series(np.linspace(4.0, 3.6, len(idx_m)), index=idx_m),
+        "DGS10": pd.Series(np.linspace(2.5, 4.5, len(idx_d)), index=idx_d),
+        "DGS2": pd.Series(np.linspace(2.0, 4.8, len(idx_d)), index=idx_d),
+    }.items():
+        rows.append(
+            pd.DataFrame(
+                {
+                    "series_id": sid,
+                    "date": series.index,
+                    "value": series.to_numpy(),
+                    "vendor": "fred",
+                    "ingested_at": pd.Timestamp(now()),
+                }
+            )
+        )
+    db.upsert_macro(pd.concat(rows))
+    cat = load_default_catalog()
+    ParquetStore(tmp_path / "data" / "parquet").write_bars(
+        make_bars(cat["XNYS_SPX"], date(2018, 1, 2), date(2024, 6, 28), vendor="yfinance")
+    )
+    assert runner.invoke(app, ["macro", "catalog", "--region", "uk"]).output.count("uk_") >= 5
+    s = runner.invoke(app, ["macro", "series", "us_cpi", "--no-refresh", "--end", "2024-06-28"])
+    assert s.exit_code == 0 and "us_cpi" in s.output
+    c = runner.invoke(app, ["macro", "curve", "--region", "us", "--no-refresh", "--end", "2024-06-28"])
+    assert c.exit_code == 0, c.output
+    assert "inverted now" in c.output
+    i = runner.invoke(app, ["macro", "inflation", "--region", "us", "--no-refresh", "--end", "2024-06-28"])
+    assert i.exit_code == 0 and "regime" in i.output
+    out = tmp_path / "board.html"
+    d = runner.invoke(
+        app, ["macro", "dashboard", "--region", "us", "--end", "2024-06-28", "--html", str(out)]
+    )
+    assert d.exit_code == 0, d.output
+    assert "quadrant" in d.output and out.exists() and "Caveats" in out.read_text()
+    empty = runner.invoke(app, ["macro", "dashboard", "--region", "uk", "--end", "2024-06-28"])
+    assert empty.exit_code == 1 and "no inputs" in empty.output

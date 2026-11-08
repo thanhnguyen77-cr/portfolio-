@@ -290,9 +290,11 @@ class FakeMacroAdapter:
     name = "fakemacro"
     identifier_key = None
 
-    def __init__(self, series: dict):
+    def __init__(self, series: dict, name: str | None = None):
         from quant.data.adapters.base import FieldMap, RateLimit
 
+        if name:
+            self.name = name
         self.series = series
         self.calls: list[tuple[list[str], object, object]] = []
         self.rate_limit = RateLimit()

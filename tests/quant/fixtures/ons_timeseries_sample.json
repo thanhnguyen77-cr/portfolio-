@@ -1,0 +1,5 @@
+{"description": {"title": "CPIH ANNUAL RATE 00: ALL ITEMS 2015=100", "cdid": "L55O", "unit": "Percent"},
+ "years": [{"date": "2023", "value": "6.8"}, {"date": "2024", "value": "3.2"}],
+ "quarters": [{"date": "2024 Q1", "value": "3.8"}, {"date": "2024 Q2", "value": "2.9"}],
+ "months": [{"date": "2024 JAN", "value": "4.2"}, {"date": "2024 FEB", "value": "3.8"}, {"date": "2024 MAR", "value": "3.8"},
+            {"date": "2024 APR", "value": "3.0"}, {"date": "2024 MAY", "value": "2.8"}, {"date": "2024 JUN", "value": "2.8"}]}
