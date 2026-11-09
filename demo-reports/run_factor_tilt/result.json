@@ -1,0 +1,124 @@
+{
+  "strategy": {
+    "name": "factor_tilt",
+    "instruments": [
+      "XNAS_US01",
+      "XNAS_US02",
+      "XNAS_US03",
+      "XNAS_US04",
+      "XNAS_US05",
+      "XNAS_US06",
+      "XNAS_US07",
+      "XNAS_US08",
+      "XNAS_US09",
+      "XNAS_US10",
+      "XLON_UK01",
+      "XLON_UK02",
+      "XLON_UK03",
+      "XLON_UK04",
+      "XLON_UK05",
+      "XLON_UK06",
+      "XLON_UK07",
+      "XLON_UK08",
+      "XLON_UK09",
+      "XLON_UK10"
+    ],
+    "params": {
+      "factors": [
+        "momentum",
+        "low_vol"
+      ],
+      "top_fraction": 0.3,
+      "top_n": null,
+      "rebalance": "monthly",
+      "lookback": 252,
+      "skip": 21,
+      "vol_window": 252,
+      "sector_neutral": false
+    }
+  },
+  "config": {
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "initial_cash": 1000000.0,
+    "base_currency": "USD",
+    "participation_cap": 0.1,
+    "allow_short": false,
+    "cash_policy": "convert_at_fill",
+    "fractional_shares": false,
+    "min_notional": 100.0,
+    "max_gross_leverage": 1.0,
+    "adjust_as_of": true,
+    "decide_on_last_session": false,
+    "cost_model": {
+      "commission_per_share": 0.0,
+      "commission_per_order": 0.0,
+      "commission_bps": 0.0,
+      "half_spread_bps": 2.0,
+      "half_spread_bps_by_instrument": {},
+      "slippage_bps": 2.0,
+      "impact_coeff": 0.0,
+      "fx_cost_bps": 2.0,
+      "borrow_bps_annual": 50.0,
+      "apply_transaction_taxes": true,
+      "unverified_fee_rules": [
+        "uk.ptm_levy@2023-04-10",
+        "us.sec_section31@2024-05-22",
+        "us.finra_taf@2024-01-01"
+      ]
+    }
+  },
+  "metrics": {
+    "sessions": 875,
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "years": 3.392,
+    "total_return": -0.12423213924037779,
+    "cagr": -0.03835093662781641,
+    "volatility": 0.12723569729829465,
+    "sharpe": -0.23704358345272328,
+    "sortino": -0.20161828699427486,
+    "max_drawdown": -0.19405270112360584,
+    "longest_underwater_sessions": 560,
+    "calmar": -0.19763155269551233,
+    "hit_rate": 0.34439359267734554,
+    "best_day": 0.03534030814819844,
+    "worst_day": -0.03014711884958743,
+    "skew": 0.05496048985130618,
+    "kurtosis": 1.4611142003389548,
+    "final_equity": 875767.8607596222,
+    "returns_by_year": {
+      "2021": 0.0,
+      "2022": -0.1242807291296788,
+      "2023": 0.09756505224679901,
+      "2024": -0.08884171954609488
+    },
+    "avg_daily_turnover": 0.008751756501337605,
+    "annual_turnover": 2.205442638337076,
+    "avg_gross_exposure": 0.6725672339055093
+  },
+  "costs": {
+    "finra_taf": 0.299132,
+    "fx_cost": 901.2940060439004,
+    "ptm_levy": 51.003403914497774,
+    "sdrt": 13540.995850906309,
+    "sec_section31": 4.753919770918946,
+    "slippage": 1420.1974105426552,
+    "spread": 1420.1974105426552
+  },
+  "caveats": [
+    "SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.",
+    "Fills at the next session open of each market; participation cap 0.1; partial fills allowed; day orders expire unfilled.",
+    "Costs: commission_per_share=0.0, commission_per_order=0.0, commission_bps=0.0, half_spread_bps=2.0, slippage_bps=2.0, impact_coeff=0.0, fx_cost_bps=2.0, borrow_bps_annual=50.0, apply_transaction_taxes=True",
+    "Dividends are credited on the ex-date (pay-date lag ignored); splits scale quantity only for RAW-priced series.",
+    "Markets closed on a union-calendar session are marked at their last available close.",
+    "Vendor adjustment state(s): ['raw']; signals use as-of adjusted prices, fills use stored prices.",
+    "Fee-schedule rules not yet verified against primary sources: ['uk.ptm_levy@2023-04-10', 'us.sec_section31@2024-05-22', 'us.finra_taf@2024-01-01'].",
+    "FX rates are vendor daily closes (~17:00 New York); equity closes earlier in the day are converted at that fix. Missing FX dates are forward-filled, never back-filled.",
+    "Universe/survivorship quality was not supplied to this run; treat results as an upper bound.",
+    "Data quality grades: {'XLON_UK01': 'A', 'XLON_UK02': 'A', 'XLON_UK03': 'A', 'XLON_UK04': 'A', 'XLON_UK05': 'A', 'XLON_UK06': 'A', 'XLON_UK07': 'A', 'XLON_UK08': 'A', 'XLON_UK09': 'A', 'XLON_UK10': 'A', 'XNAS_US01': 'A', 'XNAS_US02': 'A', 'XNAS_US03': 'A', 'XNAS_US04': 'A', 'XNAS_US05': 'A', 'XNAS_US06': 'A', 'XNAS_US07': 'A', 'XNAS_US08': 'A', 'XNAS_US09': 'A', 'XNAS_US10': 'A'} (worst A).",
+    "Universe 'demo_all' quality: current_only; coverage of historical members with price data: 100%. Results are an upper bound when coverage < 100% or quality is not pit_complete.",
+    "1 variant(s) of 'factor_tilt' were run in this process; the deflated Sharpe ratio (stage S5) accounts for this."
+  ],
+  "variant_count": 1
+}

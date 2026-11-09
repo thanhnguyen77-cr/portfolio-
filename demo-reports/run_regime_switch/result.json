@@ -1,0 +1,105 @@
+{
+  "strategy": {
+    "name": "macro_regime_switch",
+    "instruments": [
+      "XNAS_US01",
+      "XNAS_US02",
+      "XNAS_US03",
+      "XNAS_US04",
+      "XNYS_SPX",
+      "XNYS_VIX"
+    ],
+    "params": {
+      "benchmark": "XNYS_SPX",
+      "risk_on": {
+        "XNAS_US01": 0.225,
+        "XNAS_US02": 0.225,
+        "XNAS_US03": 0.225,
+        "XNAS_US04": 0.225
+      },
+      "risk_off": {},
+      "vol_index": "XNYS_VIX",
+      "caution_scale": 0.5,
+      "rebalance": "weekly"
+    }
+  },
+  "config": {
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "initial_cash": 1000000.0,
+    "base_currency": "USD",
+    "participation_cap": 0.1,
+    "allow_short": false,
+    "cash_policy": "convert_at_fill",
+    "fractional_shares": false,
+    "min_notional": 100.0,
+    "max_gross_leverage": 1.0,
+    "adjust_as_of": true,
+    "decide_on_last_session": false,
+    "cost_model": {
+      "commission_per_share": 0.0,
+      "commission_per_order": 0.0,
+      "commission_bps": 0.0,
+      "half_spread_bps": 2.0,
+      "half_spread_bps_by_instrument": {},
+      "slippage_bps": 2.0,
+      "impact_coeff": 0.0,
+      "fx_cost_bps": 2.0,
+      "borrow_bps_annual": 50.0,
+      "apply_transaction_taxes": true,
+      "unverified_fee_rules": [
+        "uk.ptm_levy@2023-04-10",
+        "us.sec_section31@2024-05-22",
+        "us.finra_taf@2024-01-01"
+      ]
+    }
+  },
+  "metrics": {
+    "sessions": 854,
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "years": 3.392,
+    "total_return": 0.20857178146451116,
+    "cagr": 0.057434413477076784,
+    "volatility": 0.11060529575267765,
+    "sharpe": 0.5611966966794423,
+    "sortino": 0.3715327022102593,
+    "max_drawdown": -0.13207965214264406,
+    "longest_underwater_sessions": 321,
+    "calmar": 0.43484679544013694,
+    "hit_rate": 0.23681125439624853,
+    "best_day": 0.04982143748919743,
+    "worst_day": -0.03220476788018811,
+    "skew": 0.3605362056591834,
+    "kurtosis": 8.228304863531582,
+    "final_equity": 1208571.781464511,
+    "returns_by_year": {
+      "2021": -0.0032541557780957353,
+      "2022": 0.04658678721413079,
+      "2023": -0.0074070178551747246,
+      "2024": 0.167190027512504
+    },
+    "avg_daily_turnover": 0.03275360472546599,
+    "annual_turnover": 8.253908390817429,
+    "avg_gross_exposure": 0.31214450352504414
+  },
+  "costs": {
+    "finra_taf": 4.572968000000004,
+    "sec_section31": 2.0074350845404267,
+    "slippage": 5779.127420189473,
+    "spread": 5779.127420189473
+  },
+  "caveats": [
+    "SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.",
+    "Fills at the next session open of each market; participation cap 0.1; partial fills allowed; day orders expire unfilled.",
+    "Costs: commission_per_share=0.0, commission_per_order=0.0, commission_bps=0.0, half_spread_bps=2.0, slippage_bps=2.0, impact_coeff=0.0, fx_cost_bps=2.0, borrow_bps_annual=50.0, apply_transaction_taxes=True",
+    "Dividends are credited on the ex-date (pay-date lag ignored); splits scale quantity only for RAW-priced series.",
+    "Markets closed on a union-calendar session are marked at their last available close.",
+    "Vendor adjustment state(s): ['raw']; signals use as-of adjusted prices, fills use stored prices.",
+    "Fee-schedule rules not yet verified against primary sources: ['uk.ptm_levy@2023-04-10', 'us.sec_section31@2024-05-22', 'us.finra_taf@2024-01-01'].",
+    "Universe/survivorship quality was not supplied to this run; treat results as an upper bound.",
+    "Data quality grades: {'XNAS_US01': 'A', 'XNAS_US02': 'A', 'XNAS_US03': 'A', 'XNAS_US04': 'A', 'XNYS_SPX': 'A', 'XNYS_VIX': 'A'} (worst A).",
+    "1 variant(s) of 'macro_regime_switch' were run in this process; the deflated Sharpe ratio (stage S5) accounts for this."
+  ],
+  "variant_count": 1
+}

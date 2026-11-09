@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quant demo (synthetic data)</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1f24; --muted:#5b6470; --line:#e2e6ea; --accent:#2a5bd7; --warn:#b4540a; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; } }
+  :root[data-theme="dark"] { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; }
+  body { margin:0; padding:0 16px 48px; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:24px 0 4px; } h2 { font-size:1.15rem; margin:28px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.86rem; } th, td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; } thead th { position:sticky; top:0; background:var(--card); }
+  .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:6px; }
+  .caveats { background:var(--card); border-left:4px solid var(--warn); padding:12px 16px; border-radius:6px; }
+  .caveats li { margin:4px 0; } pre { background:var(--card); padding:12px; border-radius:6px; overflow-x:auto; }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .kv div { background:var(--card); padding:8px 10px; border-radius:6px; }
+  .kv b { display:block; font-size:.78rem; color:var(--muted); font-weight:500; }
+  .chart { width:100%; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  details summary { cursor:pointer; margin:6px 0; }
+  .chart-missing { padding:16px; color:var(--muted); font-size:.9rem; background:var(--card); }
+</style>
+</head>
+<body><main>
+<h1>quant demo (synthetic data)</h1>
+<p class="meta">generated 2026-11-09 15:24 UTC · generated 2026-11-09 15:24 UTC · quant 0.1.0</p>
+
+<section>
+<h2>Steps</h2>
+
+
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>step</th>
+      <th>status</th>
+      <th>seconds</th>
+      <th>detail</th>
+      <th>report</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>dataset</td>
+      <td>ok</td>
+      <td>30.7</td>
+      <td>24 series, 37 actions, 11 macro series (seed 42)</td>
+      <td>demo_manifest.json</td>
+    </tr>
+    <tr>
+      <td>validate</td>
+      <td>ok</td>
+      <td>0.3</td>
+      <td>grades {'A': 20}, 0 issue(s); 37 corporate actions on file (the planted 4:1 split is a recorded action, so it is not an anomaly)</td>
+      <td>validation.html</td>
+    </tr>
+    <tr>
+      <td>universe</td>
+      <td>ok</td>
+      <td>0.1</td>
+      <td>20 members, quality current_only, coverage 100%</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>screen</td>
+      <td>ok</td>
+      <td>0.3</td>
+      <td>20 ranked, 20 pass the screen</td>
+      <td>screen.html</td>
+    </tr>
+    <tr>
+      <td>momentum</td>
+      <td>ok</td>
+      <td>11.7</td>
+      <td>CAGR +6.4%, Sharpe 0.45, max DD -25.9%, 199 fills</td>
+      <td>tearsheet_xs_momentum.html</td>
+    </tr>
+    <tr>
+      <td>factor_tilt</td>
+      <td>ok</td>
+      <td>10.6</td>
+      <td>CAGR -3.8%, Sharpe -0.24, max DD -19.4%, 182 fills</td>
+      <td>tearsheet_factor_tilt.html</td>
+    </tr>
+    <tr>
+      <td>regime</td>
+      <td>ok</td>
+      <td>10.4</td>
+      <td>CAGR +5.7%, Sharpe 0.56, max DD -13.2%, 490 fills</td>
+      <td>tearsheet_regime_switch.html</td>
+    </tr>
+    <tr>
+      <td>factors</td>
+      <td>ok</td>
+      <td>1.4</td>
+      <td>['momentum', 'low_vol'] over 874 days</td>
+      <td>factors.html</td>
+    </tr>
+    <tr>
+      <td>optimise</td>
+      <td>ok</td>
+      <td>0.5</td>
+      <td>HRP over 20 names, ex-ante vol 13.8%</td>
+      <td>weights_hrp.html</td>
+    </tr>
+    <tr>
+      <td>risk</td>
+      <td>ok</td>
+      <td>0.7</td>
+      <td>VaR family, stress windows and drawdowns on 1105 days</td>
+      <td>risk.html</td>
+    </tr>
+    <tr>
+      <td>macro</td>
+      <td>ok</td>
+      <td>0.3</td>
+      <td>quadrant 'stagflation', 13 indicators</td>
+      <td>macro_board.html</td>
+    </tr>
+    <tr>
+      <td>paper</td>
+      <td>ok</td>
+      <td>1.1</td>
+      <td>4 orders submitted on 2024-06-26, 4 filled by 2024-06-28, reconciled=True</td>
+      <td>blotter.html</td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section>
+<h2>Reports</h2>
+
+
+
+
+<ul><li><a href="validation.html">validation.html</a></li><li><a href="screen.html">screen.html</a></li><li><a href="tearsheet_xs_momentum.html">tearsheet_xs_momentum.html</a></li><li><a href="tearsheet_factor_tilt.html">tearsheet_factor_tilt.html</a></li><li><a href="tearsheet_regime_switch.html">tearsheet_regime_switch.html</a></li><li><a href="factors.html">factors.html</a></li><li><a href="weights_hrp.html">weights_hrp.html</a></li><li><a href="risk.html">risk.html</a></li><li><a href="macro_board.html">macro_board.html</a></li><li><a href="blotter.html">blotter.html</a></li></ul>
+</section>
+
+<section class="caveats">
+<h2 style="border:none;margin-top:0">Caveats</h2>
+<p class="meta">This report describes the past under stated assumptions. It is not a claim that anything is profitable or error-free.</p>
+<ul>
+<li>SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.</li><li>Run with `quant demo`; regenerate with another --seed to see how much the numbers move.</li>
+
+</ul>
+</section>
+</main>
+
+</body></html>

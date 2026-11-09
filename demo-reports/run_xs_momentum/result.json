@@ -1,0 +1,118 @@
+{
+  "strategy": {
+    "name": "xs_momentum",
+    "instruments": [
+      "XNAS_US01",
+      "XNAS_US02",
+      "XNAS_US03",
+      "XNAS_US04",
+      "XNAS_US05",
+      "XNAS_US06",
+      "XNAS_US07",
+      "XNAS_US08",
+      "XNAS_US09",
+      "XNAS_US10",
+      "XLON_UK01",
+      "XLON_UK02",
+      "XLON_UK03",
+      "XLON_UK04",
+      "XLON_UK05",
+      "XLON_UK06",
+      "XLON_UK07",
+      "XLON_UK08",
+      "XLON_UK09",
+      "XLON_UK10"
+    ],
+    "params": {
+      "lookback": 252,
+      "skip": 21,
+      "top_n": 6,
+      "top_fraction": 0.3,
+      "rebalance": "monthly"
+    }
+  },
+  "config": {
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "initial_cash": 1000000.0,
+    "base_currency": "GBP",
+    "participation_cap": 0.1,
+    "allow_short": false,
+    "cash_policy": "convert_at_fill",
+    "fractional_shares": false,
+    "min_notional": 100.0,
+    "max_gross_leverage": 1.0,
+    "adjust_as_of": true,
+    "decide_on_last_session": false,
+    "cost_model": {
+      "commission_per_share": 0.0,
+      "commission_per_order": 0.0,
+      "commission_bps": 0.0,
+      "half_spread_bps": 2.0,
+      "half_spread_bps_by_instrument": {},
+      "slippage_bps": 2.0,
+      "impact_coeff": 0.0,
+      "fx_cost_bps": 2.0,
+      "borrow_bps_annual": 50.0,
+      "apply_transaction_taxes": true,
+      "unverified_fee_rules": [
+        "uk.ptm_levy@2023-04-10",
+        "us.sec_section31@2024-05-22",
+        "us.finra_taf@2024-01-01"
+      ]
+    }
+  },
+  "metrics": {
+    "sessions": 875,
+    "start": "2021-02-05",
+    "end": "2024-06-28",
+    "years": 3.392,
+    "total_return": 0.23485992306826686,
+    "cagr": 0.0641635134772971,
+    "volatility": 0.1654317720942828,
+    "sharpe": 0.4502745588828315,
+    "sortino": 0.3975634768692584,
+    "max_drawdown": -0.25894796246615803,
+    "longest_underwater_sessions": 322,
+    "calmar": 0.2477853575916151,
+    "hit_rate": 0.3512585812356979,
+    "best_day": 0.04155733261704753,
+    "worst_day": -0.04483770927603237,
+    "skew": 0.10632246174418705,
+    "kurtosis": 1.5920676665565967,
+    "final_equity": 1234859.9230682668,
+    "returns_by_year": {
+      "2021": 0.0,
+      "2022": -0.11874637769645491,
+      "2023": 0.28212498253019924,
+      "2024": 0.09291507967461521
+    },
+    "avg_daily_turnover": 0.011951358296160302,
+    "annual_turnover": 3.011742290632396,
+    "avg_gross_exposure": 0.6653079774087424
+  },
+  "costs": {
+    "finra_taf": 1.772650816037236,
+    "fx_cost": 1347.062813432135,
+    "ptm_levy": 35.5,
+    "sdrt": 12420.531492703578,
+    "sec_section31": 7.610696310403489,
+    "slippage": 2111.907114178909,
+    "spread": 2111.907114178909
+  },
+  "caveats": [
+    "SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.",
+    "Fills at the next session open of each market; participation cap 0.1; partial fills allowed; day orders expire unfilled.",
+    "Costs: commission_per_share=0.0, commission_per_order=0.0, commission_bps=0.0, half_spread_bps=2.0, slippage_bps=2.0, impact_coeff=0.0, fx_cost_bps=2.0, borrow_bps_annual=50.0, apply_transaction_taxes=True",
+    "Dividends are credited on the ex-date (pay-date lag ignored); splits scale quantity only for RAW-priced series.",
+    "Markets closed on a union-calendar session are marked at their last available close.",
+    "Vendor adjustment state(s): ['raw']; signals use as-of adjusted prices, fills use stored prices.",
+    "Fee-schedule rules not yet verified against primary sources: ['uk.ptm_levy@2023-04-10', 'us.sec_section31@2024-05-22', 'us.finra_taf@2024-01-01'].",
+    "FX rates are vendor daily closes (~17:00 New York); equity closes earlier in the day are converted at that fix. Missing FX dates are forward-filled, never back-filled.",
+    "Universe/survivorship quality was not supplied to this run; treat results as an upper bound.",
+    "Data quality grades: {'XLON_UK01': 'A', 'XLON_UK02': 'A', 'XLON_UK03': 'A', 'XLON_UK04': 'A', 'XLON_UK05': 'A', 'XLON_UK06': 'A', 'XLON_UK07': 'A', 'XLON_UK08': 'A', 'XLON_UK09': 'A', 'XLON_UK10': 'A', 'XNAS_US01': 'A', 'XNAS_US02': 'A', 'XNAS_US03': 'A', 'XNAS_US04': 'A', 'XNAS_US05': 'A', 'XNAS_US06': 'A', 'XNAS_US07': 'A', 'XNAS_US08': 'A', 'XNAS_US09': 'A', 'XNAS_US10': 'A'} (worst A).",
+    "Universe 'demo_all' quality: current_only; coverage of historical members with price data: 100%. Results are an upper bound when coverage < 100% or quality is not pit_complete.",
+    "1 variant(s) of 'xs_momentum' were run in this process; the deflated Sharpe ratio (stage S5) accounts for this."
+  ],
+  "variant_count": 1
+}

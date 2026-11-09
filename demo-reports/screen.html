@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen (synthetic demo)</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1f24; --muted:#5b6470; --line:#e2e6ea; --accent:#2a5bd7; --warn:#b4540a; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; } }
+  :root[data-theme="dark"] { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; }
+  body { margin:0; padding:0 16px 48px; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:24px 0 4px; } h2 { font-size:1.15rem; margin:28px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.86rem; } th, td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; } thead th { position:sticky; top:0; background:var(--card); }
+  .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:6px; }
+  .caveats { background:var(--card); border-left:4px solid var(--warn); padding:12px 16px; border-radius:6px; }
+  .caveats li { margin:4px 0; } pre { background:var(--card); padding:12px; border-radius:6px; overflow-x:auto; }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .kv div { background:var(--card); padding:8px 10px; border-radius:6px; }
+  .kv b { display:block; font-size:.78rem; color:var(--muted); font-weight:500; }
+  .chart { width:100%; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  details summary { cursor:pointer; margin:6px 0; }
+  .chart-missing { padding:16px; color:var(--muted); font-size:.9rem; background:var(--card); }
+</style>
+</head>
+<body><main>
+<h1>Screen (synthetic demo)</h1>
+<p class="meta"> · generated 2026-11-09 15:24 UTC · quant 0.1.0</p>
+
+<section>
+<h2>Ranking</h2>
+
+
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>instrument_id</th>
+      <th>symbol</th>
+      <th>name</th>
+      <th>currency</th>
+      <th>price_local</th>
+      <th>price_base</th>
+      <th>adv_base</th>
+      <th>vol_ann</th>
+      <th>range_pct</th>
+      <th>sessions</th>
+      <th>dq_grade</th>
+      <th>dq_score</th>
+      <th>liquidity_pts</th>
+      <th>quality_pts</th>
+      <th>volatility_pts</th>
+      <th>price_pts</th>
+      <th>score</th>
+      <th>passes</th>
+      <th>reasons</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>XNAS_US08</td>
+      <td>US08</td>
+      <td>Demo US08 (Industrials)</td>
+      <td>USD</td>
+      <td>607</td>
+      <td>607</td>
+      <td>1.219e+09</td>
+      <td>0.2546</td>
+      <td>0.02263</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>19.9</td>
+      <td>10</td>
+      <td>99.9</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US04</td>
+      <td>US04</td>
+      <td>Demo US04 (Financials)</td>
+      <td>USD</td>
+      <td>59.99</td>
+      <td>59.99</td>
+      <td>1.117e+08</td>
+      <td>0.2491</td>
+      <td>0.02252</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>19.7</td>
+      <td>10</td>
+      <td>99.7</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK05</td>
+      <td>UK05</td>
+      <td>Demo UK05 (Materials)</td>
+      <td>GBP</td>
+      <td>2.404</td>
+      <td>2.553</td>
+      <td>1.916e+07</td>
+      <td>0.2458</td>
+      <td>0.02437</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>19.5</td>
+      <td>10</td>
+      <td>99.5</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK06</td>
+      <td>UK06</td>
+      <td>Demo UK06 (Industrials)</td>
+      <td>GBP</td>
+      <td>11.86</td>
+      <td>12.59</td>
+      <td>1.018e+08</td>
+      <td>0.2646</td>
+      <td>0.02499</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>19.2</td>
+      <td>10</td>
+      <td>99.2</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK01</td>
+      <td>UK01</td>
+      <td>Demo UK01 (Financials)</td>
+      <td>GBP</td>
+      <td>5.515</td>
+      <td>5.858</td>
+      <td>4.673e+07</td>
+      <td>0.2699</td>
+      <td>0.02197</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>18.9</td>
+      <td>10</td>
+      <td>98.9</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US07</td>
+      <td>US07</td>
+      <td>Demo US07 (Consumer)</td>
+      <td>USD</td>
+      <td>191.7</td>
+      <td>191.7</td>
+      <td>4.35e+08</td>
+      <td>0.2377</td>
+      <td>0.02259</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>18.9</td>
+      <td>10</td>
+      <td>98.9</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US06</td>
+      <td>US06</td>
+      <td>Demo US06 (Health Care)</td>
+      <td>USD</td>
+      <td>150.5</td>
+      <td>150.5</td>
+      <td>2.595e+08</td>
+      <td>0.2708</td>
+      <td>0.02152</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>18.8</td>
+      <td>10</td>
+      <td>98.8</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK04</td>
+      <td>UK04</td>
+      <td>Demo UK04 (Health Care)</td>
+      <td>GBP</td>
+      <td>27.85</td>
+      <td>29.59</td>
+      <td>2.555e+08</td>
+      <td>0.286</td>
+      <td>0.02326</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>17.9</td>
+      <td>10</td>
+      <td>97.9</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK10</td>
+      <td>UK10</td>
+      <td>Demo UK10 (Consumer)</td>
+      <td>GBP</td>
+      <td>39.43</td>
+      <td>41.88</td>
+      <td>3.607e+08</td>
+      <td>0.2873</td>
+      <td>0.02432</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>17.8</td>
+      <td>10</td>
+      <td>97.8</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK07</td>
+      <td>UK07</td>
+      <td>Demo UK07 (Telecommunications)</td>
+      <td>GBP</td>
+      <td>5.558</td>
+      <td>5.904</td>
+      <td>5.74e+07</td>
+      <td>0.2941</td>
+      <td>0.02585</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>17.4</td>
+      <td>10</td>
+      <td>97.4</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US09</td>
+      <td>US09</td>
+      <td>Demo US09 (Utilities)</td>
+      <td>USD</td>
+      <td>219.3</td>
+      <td>219.3</td>
+      <td>5.155e+08</td>
+      <td>0.3075</td>
+      <td>0.02481</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>16.6</td>
+      <td>10</td>
+      <td>96.6</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK09</td>
+      <td>UK09</td>
+      <td>Demo UK09 (Financials)</td>
+      <td>GBP</td>
+      <td>5.652</td>
+      <td>6.004</td>
+      <td>6.272e+07</td>
+      <td>0.3136</td>
+      <td>0.02673</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>16.3</td>
+      <td>10</td>
+      <td>96.3</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK08</td>
+      <td>UK08</td>
+      <td>Demo UK08 (Utilities)</td>
+      <td>GBP</td>
+      <td>11.1</td>
+      <td>11.79</td>
+      <td>1.047e+08</td>
+      <td>0.3175</td>
+      <td>0.02448</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>16.1</td>
+      <td>10</td>
+      <td>96.1</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US02</td>
+      <td>US02</td>
+      <td>Demo US02 (Technology)</td>
+      <td>USD</td>
+      <td>449.9</td>
+      <td>449.9</td>
+      <td>8.762e+08</td>
+      <td>0.3234</td>
+      <td>0.02632</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>15.7</td>
+      <td>10</td>
+      <td>95.7</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US05</td>
+      <td>US05</td>
+      <td>Demo US05 (Energy)</td>
+      <td>USD</td>
+      <td>328.4</td>
+      <td>328.4</td>
+      <td>5.798e+08</td>
+      <td>0.332</td>
+      <td>0.02705</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>15.3</td>
+      <td>10</td>
+      <td>95.3</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK02</td>
+      <td>UK02</td>
+      <td>Demo UK02 (Energy)</td>
+      <td>GBP</td>
+      <td>27.23</td>
+      <td>28.92</td>
+      <td>2.69e+08</td>
+      <td>0.19</td>
+      <td>0.02003</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>15</td>
+      <td>10</td>
+      <td>95</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XLON_UK03</td>
+      <td>UK03</td>
+      <td>Demo UK03 (Consumer)</td>
+      <td>GBP</td>
+      <td>12.12</td>
+      <td>12.88</td>
+      <td>1.35e+08</td>
+      <td>0.1865</td>
+      <td>0.0208</td>
+      <td>1133</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>14.7</td>
+      <td>10</td>
+      <td>94.7</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US03</td>
+      <td>US03</td>
+      <td>Demo US03 (Financials)</td>
+      <td>USD</td>
+      <td>286.8</td>
+      <td>286.8</td>
+      <td>5.584e+08</td>
+      <td>0.3938</td>
+      <td>0.02975</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>12.3</td>
+      <td>10</td>
+      <td>92.3</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US10</td>
+      <td>US10</td>
+      <td>Demo US10 (Materials)</td>
+      <td>USD</td>
+      <td>71.83</td>
+      <td>71.83</td>
+      <td>1.322e+08</td>
+      <td>0.3989</td>
+      <td>0.02986</td>
+      <td>1130</td>
+      <td>A</td>
+      <td>100</td>
+      <td>40</td>
+      <td>30</td>
+      <td>12.1</td>
+      <td>10</td>
+      <td>92.1</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>XNAS_US01</td>
+      <td>US01</td>
+      <td>Demo US01 (Technology)</td>
+      <td>USD</td>
+      <td>69.14</td>
+      <td>69.14</td>
+      <td>1.856e+08</td>
+      <td>0.3028</td>
+      <td>0.02467</td>
+      <td>1130</td>
+      <td>B</td>
+      <td>80</td>
+      <td>40</td>
+      <td>24</td>
+      <td>16.9</td>
+      <td>10</td>
+      <td>90.9</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section class="caveats">
+<h2 style="border:none;margin-top:0">Caveats</h2>
+<p class="meta">This report describes the past under stated assumptions. It is not a claim that anything is profitable or error-free.</p>
+<ul>
+<li>SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.</li>
+
+</ul>
+</section>
+</main>
+
+</body></html>
