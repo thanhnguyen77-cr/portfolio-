@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Quant Platform Tour</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column of sections, each a short list of things to open, with a status ledger near the end. */
+:root{--bg:#f4f6f8;--panel:#fff;--ink:#15202b;--muted:#5b6876;--rule:#dde3e9;--accent:#1f6f8b;--ok:#2f7d4f;--warn:#a16207;--no:#8a94a0;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;--f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--f-data:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161d;--panel:#16202a;--ink:#e3e9ef;--muted:#93a1ae;--rule:#26323e;--accent:#5fb3d0;--ok:#6fcf97;--warn:#e3b341;--no:#7d8a97;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f161d;--panel:#16202a;--ink:#e3e9ef;--muted:#93a1ae;--rule:#26323e;--accent:#5fb3d0;--ok:#6fcf97;--warn:#e3b341;--no:#7d8a97;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+main{max-width:860px;margin:0 auto;display:grid;gap:30px}
+h1{font-family:var(--f-display);font-size:2.1rem;margin:0 0 6px;letter-spacing:.01em;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:1.25rem;margin:0 0 10px;text-wrap:balance}
+p{margin:0}
+.lede{color:var(--muted);max-width:65ch}
+.tag{font-family:var(--f-data);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.cta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cta a{display:grid;gap:4px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.cta a:hover{border-color:var(--accent)}
+.cta b{color:var(--accent);font-weight:600}
+.cta span{color:var(--muted);font-size:.88rem}
+ol.steps,ul.list{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--rule);border-radius:10px}
+ol.steps li,ul.list li{display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr) auto;gap:4px 14px;align-items:baseline;padding:10px 16px;border-bottom:1px solid var(--rule)}
+ol.steps li:last-child,ul.list li:last-child{border-bottom:0}
+.name{font-weight:600}
+.what{color:var(--muted);font-size:.9rem;min-width:0}
+.go{font-family:var(--f-data);font-size:.85rem;white-space:nowrap}
+@media (max-width:560px){ol.steps li,ul.list li{grid-template-columns:minmax(0,1fr) auto}.what{grid-column:1/-1;grid-row:2}}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 14px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num{text-align:right;font-family:var(--f-data)}
+code,pre{font-family:var(--f-data);font-size:.85rem}
+pre{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:0}
+.pill{display:inline-block;font-family:var(--f-data);font-size:.72rem;letter-spacing:.04em;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.no{color:var(--no)}
+.note{color:var(--muted);font-size:.86rem;max-width:72ch}
+</style>
+
+<main>
+  <header>
+    <p class="tag" style="margin:0 0 6px"><a href="../">← Back to the main site</a></p>
+    <span class="tag">Research · backtesting · paper trading · US and UK</span>
+    <h1>Quant Platform</h1>
+    <p class="lede">Everything built in this project: a Python platform for researching, backtesting and paper trading US and UK markets, with the reports it produced and a page you can play with. Paper trading only: there is no live trading, by design.</p>
+  </header>
+
+  <section>
+    <h2>Start here</h2>
+    <div class="cta">
+      <a href="lab.html"><b>Backtest Lab</b><span>Try trend following on real Apple, Microsoft and Vodafone prices. Change the rules, see results instantly.</span></a>
+      <a href="https://github.com/thanhnguyen77-cr/portfolio-/tree/claude/bold-fermi-wt58n7/quant" target="_blank" rel="noopener"><b>Source code ↗</b><span>The full code on GitHub, branch claude/bold-fermi-wt58n7, with the README and every test.</span></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reports on real market data</h2>
+    <ul class="list">
+      <li><span class="name">Backtest tearsheet</span><span class="what">50/200-day trend following on AAPL, MSFT and VOD.L, 2021 to Nov 2026, in GBP with costs and stamp duty. +30.1% total, Sharpe 0.36, worst fall −36.5%.</span><a class="go" href="real/tearsheet.html">Open</a></li>
+      <li><span class="name">Risk report</span><span class="what">Value at Risk by five methods, its backtest, stress windows from the 2008 crisis to the 2022 gilt crisis, drawdowns and correlations.</span><a class="go" href="real/risk.html">Open</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The full pipeline, end to end</h2>
+    <p class="note" style="margin-bottom:10px">One run of <code>quant demo</code>: every stage on a synthetic dataset of 20 made-up US and UK stocks. It proves the pieces work together; the numbers describe the generator, not any market.</p>
+    <ol class="steps">
+      <li><span class="name">Overview</span><span class="what">All twelve steps, their timings and results.</span><a class="go" href="demo/index.html">Open</a></li>
+      <li><span class="name">Data check</span><span class="what">Gaps, stale prices, outliers, splits and pence-to-pound changes, graded A to F.</span><a class="go" href="demo/validation.html">Open</a></li>
+      <li><span class="name">Screen</span><span class="what">Stocks ranked by liquidity, volatility and data quality.</span><a class="go" href="demo/screen.html">Open</a></li>
+      <li><span class="name">Momentum</span><span class="what">Cross-sectional momentum backtest with bootstrap and deflated Sharpe checks.</span><a class="go" href="demo/tearsheet_xs_momentum.html">Open</a></li>
+      <li><span class="name">Factor tilt</span><span class="what">Momentum plus low-volatility tilt. It lost money here, and the report says so.</span><a class="go" href="demo/tearsheet_factor_tilt.html">Open</a></li>
+      <li><span class="name">Regime switch</span><span class="what">Holds stocks only when the market regime is risk-on.</span><a class="go" href="demo/tearsheet_regime_switch.html">Open</a></li>
+      <li><span class="name">Factors</span><span class="what">Long-short factor returns built from the universe.</span><a class="go" href="demo/factors.html">Open</a></li>
+      <li><span class="name">Portfolio</span><span class="what">Hierarchical risk parity weights and each stock's share of risk.</span><a class="go" href="demo/weights_hrp.html">Open</a></li>
+      <li><span class="name">Risk</span><span class="what">The risk report on the demo portfolio.</span><a class="go" href="demo/risk.html">Open</a></li>
+      <li><span class="name">Macro board</span><span class="what">Growth, inflation, rates, credit and volatility in one board.</span><a class="go" href="demo/macro_board.html">Open</a></li>
+      <li><span class="name">Paper trading</span><span class="what">One simulated trading session: orders, fills, ledger and reconciliation.</span><a class="go" href="demo/blotter.html">Open</a></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>What's inside</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Part</th><th>What it does</th><th style="text-align:right">Lines</th></tr></thead>
+      <tbody>
+        <tr><td>Data</td><td>Twelve vendor connectors, local price cache, data checks, currency conversion, record of every download</td><td class="num">4,745</td></tr>
+        <tr><td>Command line</td><td>The <code>quant</code> command: 55 sub-commands</td><td class="num">2,441</td></tr>
+        <tr><td>Paper trading</td><td>Simulated broker, ledger, pre-trade risk checks, Alpaca paper adapter</td><td class="num">2,207</td></tr>
+        <tr><td>Backtesting</td><td>Multi-currency engine, trading costs and taxes, robustness tests</td><td class="num">1,767</td></tr>
+        <tr><td>Portfolio</td><td>Mean-variance, risk parity, Black-Litterman, HRP, volatility targeting, Kelly sizing</td><td class="num">1,297</td></tr>
+        <tr><td>Risk</td><td>Value at Risk, stress tests, scenarios, correlation breakdown, drawdowns</td><td class="num">926</td></tr>
+        <tr><td>Fundamentals</td><td>Financial statements by filing date, ratios, DCF valuation, peer comparison, scores</td><td class="num">884</td></tr>
+        <tr><td>Universes</td><td>Index members over time, screens</td><td class="num">747</td></tr>
+        <tr><td>Everything else</td><td>Technical indicators, statistics, factors, macro, strategies, reports, crypto, demo</td><td class="num">3,865</td></tr>
+        <tr><td><b>Tests</b></td><td>406 offline tests, plus 7 that call real vendors</td><td class="num">6,961</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Checked against real vendors</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source</th><th>Used for</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Yahoo Finance</td><td>Daily prices, dividends, splits, FX</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>Alpaca</td><td>US market data</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>FRED</td><td>US rates, inflation, jobs, credit spreads</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>Bank of England</td><td>Bank Rate, SONIA, gilt yields</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>ONS</td><td>UK inflation, GDP, jobs, retail sales</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>Wikipedia</td><td>S&amp;P 500, FTSE 100 and FTSE 250 members</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>Ken French library</td><td>US Fama-French factors</td><td><span class="pill ok">verified live</span></td></tr>
+        <tr><td>Stooq</td><td>Backup daily prices</td><td><span class="pill warn">blocks automated use</span></td></tr>
+        <tr><td>Alpaca paper broker, Polygon, Tiingo, Nasdaq Data Link, Companies House, SEC EDGAR</td><td>Paper orders, prices, datasets, filings</td><td><span class="pill no">tested on recorded data</span></td></tr>
+        <tr><td>Bloomberg, Refinitiv, FactSet, Capital IQ</td><td>Licensed data</td><td><span class="pill no">placeholders with setup steps</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Run it yourself</h2>
+    <pre>git clone https://github.com/thanhnguyen77-cr/portfolio-.git
+cd portfolio- &amp;&amp; git checkout claude/bold-fermi-wt58n7
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e ".[dev,yfinance]"
+quant demo --out demo-reports</pre>
+  </section>
+
+  <p class="note">Nothing here claims a strategy makes money or that the code is free of errors. Every report ends with the assumptions behind its numbers. Not investment advice.</p>
+</main>
+
+</body>
+</html>
