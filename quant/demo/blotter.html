@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper blotter: demo_42</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1f24; --muted:#5b6470; --line:#e2e6ea; --accent:#2a5bd7; --warn:#b4540a; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; } }
+  :root[data-theme="dark"] { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; }
+  body { margin:0; padding:0 16px 48px; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:24px 0 4px; } h2 { font-size:1.15rem; margin:28px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.86rem; } th, td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; } thead th { position:sticky; top:0; background:var(--card); }
+  .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:6px; }
+  .caveats { background:var(--card); border-left:4px solid var(--warn); padding:12px 16px; border-radius:6px; }
+  .caveats li { margin:4px 0; } pre { background:var(--card); padding:12px; border-radius:6px; overflow-x:auto; }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .kv div { background:var(--card); padding:8px 10px; border-radius:6px; }
+  .kv b { display:block; font-size:.78rem; color:var(--muted); font-weight:500; }
+  .chart { width:100%; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  details summary { cursor:pointer; margin:6px 0; }
+  .chart-missing { padding:16px; color:var(--muted); font-size:.9rem; background:var(--card); }
+</style>
+</head>
+<body><main>
+<h1>Paper blotter: demo_42</h1>
+<p class="meta">demo_42 · sim · USD · as of 2024-06-28 · generated 2026-11-08 22:30 UTC · quant 0.1.0</p>
+
+<section>
+<h2>Account</h2>
+
+<div class="kv"><div><b>account_id</b>demo_42</div><div><b>broker</b>sim</div><div><b>paper</b>True</div><div><b>as_of</b>2024-06-28</div><div><b>base_currency</b>USD</div><div><b>cash_base</b>680,987.28</div><div><b>positions_value</b>314,662.88</div><div><b>equity</b>995,650.16</div><div><b>last_equity</b>1,001,690.18</div><div><b>day_change_pct</b>-0.60</div><div><b>n_positions</b>4</div><div><b>n_open_orders</b>0</div><div><b>cash</b>USD 680,987.28</div></div>
+<div class="chart" id="chart-0" style="height:320px"></div>
+<script type="application/json" data-chart="chart-0">{"data": [{"type": "scatter", "mode": "lines", "name": "equity", "x": ["2024-06-26", "2024-06-27", "2024-06-28"], "y": [1000000.0, 1001690.1813636019, 995650.160853331], "hovertemplate": "%{y:,.2f}<extra>equity<\/extra>", "meta": {"role": "series", "slot": 0}}], "layout": {"yaxis": {"tickformat": ",.0f"}}}</script>
+
+
+</section>
+
+<section>
+<h2>Positions</h2>
+
+
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>instrument_id</th>
+      <th>qty</th>
+      <th>avg_price</th>
+      <th>currency</th>
+      <th>last_price</th>
+      <th>market_value_base</th>
+      <th>unrealised_local</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>XNAS_US01</td>
+      <td>1,118</td>
+      <td>71.75</td>
+      <td>USD</td>
+      <td>69.14</td>
+      <td>7.73e+04</td>
+      <td>-2,919</td>
+    </tr>
+    <tr>
+      <td>XNAS_US02</td>
+      <td>178</td>
+      <td>448.7</td>
+      <td>USD</td>
+      <td>449.9</td>
+      <td>8.009e+04</td>
+      <td>215.4</td>
+    </tr>
+    <tr>
+      <td>XNAS_US03</td>
+      <td>275</td>
+      <td>288.1</td>
+      <td>USD</td>
+      <td>286.8</td>
+      <td>7.886e+04</td>
+      <td>-375.5</td>
+    </tr>
+    <tr>
+      <td>XNAS_US04</td>
+      <td>1,307</td>
+      <td>60.87</td>
+      <td>USD</td>
+      <td>59.99</td>
+      <td>7.841e+04</td>
+      <td>-1,143</td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section>
+<h2>Open orders</h2>
+<p>none</p>
+
+
+
+
+</section>
+
+<section>
+<h2>Fills (latest 100)</h2>
+
+<div class="kv"><div><b>total costs</b>127.55 (local ccy, summed)</div></div>
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>fill_id</th>
+      <th>order_id</th>
+      <th>instrument_id</th>
+      <th>side</th>
+      <th>qty</th>
+      <th>price</th>
+      <th>session_date</th>
+      <th>currency</th>
+      <th>gross_notional</th>
+      <th>commission</th>
+      <th>spread</th>
+      <th>slippage</th>
+      <th>taxes</th>
+      <th>fx_cost</th>
+      <th>total_cost</th>
+      <th>tag</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>demo_42-F000001</td>
+      <td>demo_42-000001</td>
+      <td>XNAS_US01</td>
+      <td>buy</td>
+      <td>1,118</td>
+      <td>71.75</td>
+      <td>2024-06-27</td>
+      <td>USD</td>
+      <td>8.021e+04</td>
+      <td>0</td>
+      <td>16.04</td>
+      <td>16.04</td>
+      <td>0</td>
+      <td>0</td>
+      <td>32.09</td>
+      <td>fixed_weights</td>
+    </tr>
+    <tr>
+      <td>demo_42-F000002</td>
+      <td>demo_42-000002</td>
+      <td>XNAS_US02</td>
+      <td>buy</td>
+      <td>178</td>
+      <td>448.7</td>
+      <td>2024-06-27</td>
+      <td>USD</td>
+      <td>7.988e+04</td>
+      <td>0</td>
+      <td>15.98</td>
+      <td>15.98</td>
+      <td>0</td>
+      <td>0</td>
+      <td>31.95</td>
+      <td>fixed_weights</td>
+    </tr>
+    <tr>
+      <td>demo_42-F000003</td>
+      <td>demo_42-000003</td>
+      <td>XNAS_US03</td>
+      <td>buy</td>
+      <td>275</td>
+      <td>288.1</td>
+      <td>2024-06-27</td>
+      <td>USD</td>
+      <td>7.924e+04</td>
+      <td>0</td>
+      <td>15.85</td>
+      <td>15.85</td>
+      <td>0</td>
+      <td>0</td>
+      <td>31.7</td>
+      <td>fixed_weights</td>
+    </tr>
+    <tr>
+      <td>demo_42-F000004</td>
+      <td>demo_42-000004</td>
+      <td>XNAS_US04</td>
+      <td>buy</td>
+      <td>1,307</td>
+      <td>60.87</td>
+      <td>2024-06-27</td>
+      <td>USD</td>
+      <td>7.956e+04</td>
+      <td>0</td>
+      <td>15.91</td>
+      <td>15.91</td>
+      <td>0</td>
+      <td>0</td>
+      <td>31.82</td>
+      <td>fixed_weights</td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section>
+<h2>Events (latest 50)</h2>
+
+
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>event_id</th>
+      <th>ts</th>
+      <th>session_date</th>
+      <th>type</th>
+      <th>instrument_id</th>
+      <th>detail</th>
+      <th>amount</th>
+      <th>currency</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>2026-11-08 22:30:37.540823+00:00</td>
+      <td>2024-06-25</td>
+      <td>deposit</td>
+      <td></td>
+      <td>initial deposit</td>
+      <td>1e+06</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2026-11-08 22:30:37.716610+00:00</td>
+      <td>2024-06-26</td>
+      <td>order_submitted</td>
+      <td>XNAS_US01</td>
+      <td>demo_42-000001 buy 1118 XNAS_US01 market</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>2026-11-08 22:30:37.771508+00:00</td>
+      <td>2024-06-26</td>
+      <td>order_submitted</td>
+      <td>XNAS_US02</td>
+      <td>demo_42-000002 buy 178 XNAS_US02 market</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>2026-11-08 22:30:37.828230+00:00</td>
+      <td>2024-06-26</td>
+      <td>order_submitted</td>
+      <td>XNAS_US03</td>
+      <td>demo_42-000003 buy 275 XNAS_US03 market</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>2026-11-08 22:30:37.886911+00:00</td>
+      <td>2024-06-26</td>
+      <td>order_submitted</td>
+      <td>XNAS_US04</td>
+      <td>demo_42-000004 buy 1307 XNAS_US04 market</td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>2026-11-08 22:30:38.048385+00:00</td>
+      <td>2024-06-27</td>
+      <td>fill</td>
+      <td>XNAS_US01</td>
+      <td>demo_42-000001 buy 1118 @ 71.7486</td>
+      <td>-8.021e+04</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>2026-11-08 22:30:38.048405+00:00</td>
+      <td>2024-06-27</td>
+      <td>cost</td>
+      <td>XNAS_US01</td>
+      <td>demo_42-000001 {'currency': 'USD', 'commission': 0.0, 'spread': 16.042984644708135, 'slippage': 16.042984644708135, 'taxes': {}, 'fx_cost': 0.0, 'total': 32.08596928941627}</td>
+      <td>-32.09</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>2026-11-08 22:30:38.048536+00:00</td>
+      <td>2024-06-27</td>
+      <td>fill</td>
+      <td>XNAS_US02</td>
+      <td>demo_42-000002 buy 178 @ 448.74</td>
+      <td>-7.988e+04</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>2026-11-08 22:30:38.048545+00:00</td>
+      <td>2024-06-27</td>
+      <td>cost</td>
+      <td>XNAS_US02</td>
+      <td>demo_42-000002 {'currency': 'USD', 'commission': 0.0, 'spread': 15.975141882339585, 'slippage': 15.975141882339585, 'taxes': {}, 'fx_cost': 0.0, 'total': 31.95028376467917}</td>
+      <td>-31.95</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>2026-11-08 22:30:38.048590+00:00</td>
+      <td>2024-06-27</td>
+      <td>fill</td>
+      <td>XNAS_US03</td>
+      <td>demo_42-000003 buy 275 @ 288.143</td>
+      <td>-7.924e+04</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>2026-11-08 22:30:38.048596+00:00</td>
+      <td>2024-06-27</td>
+      <td>cost</td>
+      <td>XNAS_US03</td>
+      <td>demo_42-000003 {'currency': 'USD', 'commission': 0.0, 'spread': 15.84785198665305, 'slippage': 15.84785198665305, 'taxes': {}, 'fx_cost': 0.0, 'total': 31.6957039733061}</td>
+      <td>-31.7</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>2026-11-08 22:30:38.048631+00:00</td>
+      <td>2024-06-27</td>
+      <td>fill</td>
+      <td>XNAS_US04</td>
+      <td>demo_42-000004 buy 1307 @ 60.8686</td>
+      <td>-7.956e+04</td>
+      <td>USD</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>2026-11-08 22:30:38.048638+00:00</td>
+      <td>2024-06-27</td>
+      <td>cost</td>
+      <td>XNAS_US04</td>
+      <td>demo_42-000004 {'currency': 'USD', 'commission': 0.0, 'spread': 15.911055229477375, 'slippage': 15.911055229477375, 'taxes': {}, 'fx_cost': 0.0, 'total': 31.82211045895475}</td>
+      <td>-31.82</td>
+      <td>USD</td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section>
+<h2>Reconciliation</h2>
+<p>reconciled</p>
+<div class="kv"><div><b>ok</b>True</div><div><b>issues</b>0</div></div>
+
+
+
+</section>
+
+<section class="caveats">
+<h2 style="border:none;margin-top:0">Caveats</h2>
+<p class="meta">This report describes the past under stated assumptions. It is not a claim that anything is profitable or error-free.</p>
+<ul>
+<li>PAPER TRADING. Fills are simulated against daily bars at the next session open with the shared cost model; real fills, queue position, halts and outages are not modelled.</li><li>Marks use the last cached close; stale data makes equity and buying power stale too.</li><li>No live broker exists in this version: live trading is disabled by design.</li><li>SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.</li><li>Since inception: -0.43% on 3 marked session(s); far too short to say anything about skill.</li>
+
+</ul>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script>
+// Colours are assigned here by role (series slot / polarity), never baked into the chart data, so the
+// same page renders correctly in light and dark mode. Palette: validated reference instance (dataviz skill).
+var THEMES = {
+  light: {surface: "#fcfcfb", ink: "#52514e", primary: "#0b0b0b", grid: "#e1e0d9", axis: "#c3c2b7",
+          series: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"], negative: "#e34948"},
+  dark:  {surface: "#1a1a19", ink: "#c3c2b7", primary: "#f0efec", grid: "#2c2c2a", axis: "#383835",
+          series: ["#3987e5", "#d95926", "#199e70", "#c98500"], negative: "#e66767"}
+};
+function scheme() {
+  var forced = document.documentElement.getAttribute("data-theme");
+  if (forced === "dark" || forced === "light") return forced;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function styled(trace, th) {
+  var t = Object.assign({}, trace);
+  var meta = t.meta || {};
+  if (meta.role === "series") {
+    var col = th.series[meta.slot % th.series.length];
+    t.line = Object.assign({}, t.line || {}, {color: col, width: 2});
+    t.marker = Object.assign({}, t.marker || {}, {color: col, size: 8});
+    if (t.fill) t.fillcolor = col + "26";
+  } else if (meta.role === "polarity") {
+    var colours = (t.y || []).map(function (v) { return v >= 0 ? th.series[0] : th.negative; });
+    t.marker = Object.assign({}, t.marker || {}, {color: colours, line: {width: 0}});
+  }
+  return t;
+}
+function renderAll() {
+  var th = THEMES[scheme()];
+  var specs = document.querySelectorAll("script[type='application/json'][data-chart]");
+  specs.forEach(function (el) {
+    var spec = JSON.parse(el.textContent);
+    var data = spec.data.map(function (tr) { return styled(tr, th); });
+    var axis = function (a) { return Object.assign({gridcolor: th.grid, linecolor: th.axis, zerolinecolor: th.axis,
+      tickfont: {color: th.ink}, title: Object.assign({font: {color: th.ink}}, (a && a.title) || {})}, a || {}); };
+    var layout = Object.assign({}, spec.layout, {
+      paper_bgcolor: th.surface, plot_bgcolor: th.surface,
+      font: {color: th.ink, family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 12},
+      xaxis: axis(spec.layout.xaxis), yaxis: axis(spec.layout.yaxis),
+      margin: {l: 60, r: 16, t: 16, b: 48}, hovermode: spec.layout.hovermode || "x unified",
+      showlegend: spec.data.length > 1, legend: {orientation: "h", y: -0.22, font: {color: th.ink}}, bargap: 0.35
+    });
+    Plotly.react(el.getAttribute("data-chart"), data, layout, {displayModeBar: false, responsive: true});
+  });
+}
+if (window.Plotly) {
+  renderAll();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+} else {
+  // Charting library unavailable (offline, blocked CDN): fall back to the table views and say so.
+  document.querySelectorAll(".chart").forEach(function (el) {
+    el.textContent = "Chart library not loaded (offline or CDN blocked). The table view below holds the same data; "
+      + "regenerate with inline_plotly=True / --inline-js for a fully offline report.";
+    el.classList.add("chart-missing");
+  });
+  document.querySelectorAll("details").forEach(function (d) { d.open = true; });
+}
+</script>
+
+</body></html>
