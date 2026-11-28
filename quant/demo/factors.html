@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factor returns (synthetic demo)</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1f24; --muted:#5b6470; --line:#e2e6ea; --accent:#2a5bd7; --warn:#b4540a; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; } }
+  :root[data-theme="dark"] { --bg:#0e1116; --fg:#e6e9ee; --muted:#9aa4b2; --line:#2a3139; --accent:#6ea0ff; --warn:#f0a35a; --card:#161b22; }
+  body { margin:0; padding:0 16px 48px; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:24px 0 4px; } h2 { font-size:1.15rem; margin:28px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.86rem; } th, td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; } thead th { position:sticky; top:0; background:var(--card); }
+  .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:6px; }
+  .caveats { background:var(--card); border-left:4px solid var(--warn); padding:12px 16px; border-radius:6px; }
+  .caveats li { margin:4px 0; } pre { background:var(--card); padding:12px; border-radius:6px; overflow-x:auto; }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .kv div { background:var(--card); padding:8px 10px; border-radius:6px; }
+  .kv b { display:block; font-size:.78rem; color:var(--muted); font-weight:500; }
+  .chart { width:100%; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; }
+  details summary { cursor:pointer; margin:6px 0; }
+  .chart-missing { padding:16px; color:var(--muted); font-size:.9rem; background:var(--card); }
+</style>
+</head>
+<body><main>
+<h1>Factor returns (synthetic demo)</h1>
+<p class="meta"> · generated 2026-11-08 22:30 UTC · quant 0.1.0</p>
+
+<section>
+<h2>Daily long-short returns</h2>
+
+
+
+<div class="table-wrap"><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>factor</th>
+      <th>count</th>
+      <th>mean</th>
+      <th>std</th>
+      <th>min</th>
+      <th>25%</th>
+      <th>50%</th>
+      <th>75%</th>
+      <th>max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>momentum</td>
+      <td>874</td>
+      <td>-0.0002168</td>
+      <td>0.01083</td>
+      <td>-0.03554</td>
+      <td>-0.007151</td>
+      <td>-0.0001837</td>
+      <td>0.006659</td>
+      <td>0.0519</td>
+    </tr>
+    <tr>
+      <td>low_vol</td>
+      <td>874</td>
+      <td>-0.0006046</td>
+      <td>0.01098</td>
+      <td>-0.03696</td>
+      <td>-0.007816</td>
+      <td>-0.0008006</td>
+      <td>0.006058</td>
+      <td>0.0419</td>
+    </tr>
+  </tbody>
+</table></div>
+
+</section>
+
+<section class="caveats">
+<h2 style="border:none;margin-top:0">Caveats</h2>
+<p class="meta">This report describes the past under stated assumptions. It is not a claim that anything is profitable or error-free.</p>
+<ul>
+<li>SYNTHETIC DATA: every price, action and macro observation in this dataset was generated from a seeded model. Results describe the generator, not any market.</li>
+
+</ul>
+</section>
+</main>
+
+</body></html>
